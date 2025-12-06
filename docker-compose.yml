@@ -13,7 +13,8 @@ services:
       # Adjust device path based on your system (e.g., /dev/video0)
       - /dev/video0:/dev/video0
     environment:
-      - FLASK_ENV=development
+      - FLASK_ENV=production
+      - DEBUG=False
       - HOST=0.0.0.0
       - PORT=5000
       - CAMERA_INDEX=0

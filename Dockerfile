@@ -31,5 +31,5 @@ EXPOSE 5000
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
-# Run the application
-CMD ["python", "run.py"]
+# Run the application with Gunicorn (production WSGI server)
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "wsgi:app"]

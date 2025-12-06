@@ -115,6 +115,17 @@ http://localhost:5000
    - Start/stop video recording
    - View list of recorded videos
 
+### Production Deployment
+
+For production use, the application uses **Gunicorn** (a production-grade WSGI server) instead of Flask's development server:
+
+```bash
+# Production deployment with Gunicorn
+gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 wsgi:app
+```
+
+When using Docker (recommended), Gunicorn is used automatically. The development server (`python run.py`) is only for local testing.
+
 ## Project Structure
 
 ```
@@ -127,7 +138,8 @@ simple-webcam-recorder/
 │       └── index.html       # Main web interface
 ├── recordings/              # Directory for saved videos
 ├── config.py                # Configuration settings
-├── run.py                   # Application entry point
+├── run.py                   # Development server entry point
+├── wsgi.py                  # Production WSGI entry point
 ├── requirements.txt         # Python dependencies
 ├── Dockerfile               # Docker image configuration
 ├── docker-compose.yml       # Docker Compose setup
