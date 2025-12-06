@@ -120,7 +120,8 @@ http://localhost:5000
 ```
 simple-webcam-recorder/
 ├── app/
-│   ├── __init__.py          # Flask application factory
+│   ├── __init__.py          # Flask application initialization
+│   ├── routes.py            # Application routes (using blueprints)
 │   ├── camera.py            # Camera service for streaming/recording
 │   └── templates/
 │       └── index.html       # Main web interface
@@ -146,15 +147,12 @@ The application provides the following REST API endpoints:
 - `GET /api/recording/status` - Get recording status
 - `GET /api/recordings` - List all recordings
 
-## Development
+## Architecture
 
-The application uses the Flask application factory pattern for better modularity and testing:
-
-```python
-from app import create_app
-
-app = create_app('development')
-```
+The application uses Flask with blueprints for clean code organization:
+- Routes are defined in `app/routes.py` using Flask blueprints
+- Camera service provides thread-safe video capture and recording
+- Configuration managed through environment variables
 
 ## Troubleshooting
 
