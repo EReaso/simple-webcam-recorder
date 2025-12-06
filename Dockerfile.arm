@@ -1,0 +1,49 @@
+# Dockerfile optimized for ARM architecture (Raspberry Pi)
+# This uses opencv-python-headless which is better supported on ARM platforms
+
+FROM python:3.11-slim
+
+# Install system dependencies for OpenCV
+# Note: On ARM, we use opencv-python-headless to avoid GUI dependencies
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgl1 \
+    libgstreamer1.0-0 \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+COPY requirements.arm.txt .
+
+# Install Python dependencies
+# Use ARM-optimized requirements for better compatibility
+RUN pip install --no-cache-dir -r requirements.arm.txt
+
+# Copy application code
+COPY . .
+
+# Make entrypoint script executable
+RUN chmod +x entrypoint.sh
+
+# Create recordings directory
+RUN mkdir -p recordings
+
+# Expose port
+EXPOSE 5000
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# Run the application with Gunicorn (production WSGI server)
+# The entrypoint script reads WORKERS env variable to configure worker count
+CMD ["./entrypoint.sh"]

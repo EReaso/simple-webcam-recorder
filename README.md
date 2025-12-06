@@ -10,12 +10,13 @@ A configurable Flask web server for recording and streaming USB webcam video. Fe
 - ⚙️ **Configurable** - Customize camera settings, resolution, FPS, and more
 - 📁 **Recording management** - View list of recorded videos
 - 🏭 **Application factory pattern** - Clean, scalable Flask architecture
+- 🔧 **ARM support** - Native support for Raspberry Pi and ARM-based systems
 
 ## Requirements
 
 - Python 3.9 or higher (or Docker)
-- USB webcam
-- Linux, macOS, or Windows
+- USB webcam or Raspberry Pi Camera Module
+- Linux, macOS, Windows, or **Raspberry Pi** (ARM)
 
 ## Quick Start with Docker (Recommended)
 
@@ -36,6 +37,17 @@ docker-compose up
 
 **Note:** On Linux, you may need to adjust the webcam device in `docker-compose.yml` if your camera is not at `/dev/video0`. Use `ls /dev/video*` to find your device.
 
+### Raspberry Pi / ARM Systems
+
+For Raspberry Pi and other ARM-based systems, use the ARM-optimized configuration:
+
+```bash
+# Use ARM-specific Docker Compose configuration
+docker-compose -f docker-compose.arm.yml up
+```
+
+For detailed Raspberry Pi setup instructions, performance tuning, and troubleshooting, see the **[Raspberry Pi Setup Guide](RASPBERRY_PI.md)**.
+
 ## Installation (Without Docker)
 
 1. Clone the repository:
@@ -53,6 +65,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 3. Install dependencies:
 ```bash
 pip install -r requirements.txt
+
+# For Raspberry Pi / ARM systems, use ARM-optimized requirements:
+# pip install -r requirements.arm.txt
 ```
 
 ## Configuration
