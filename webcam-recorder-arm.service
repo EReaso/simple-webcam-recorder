@@ -1,0 +1,19 @@
+# Simple Webcam Recorder - systemd service file (ARM/Raspberry Pi)
+# Optimized for ARM-based devices with limited resources
+# See README.md "ARM/Raspberry Pi Deployment" section for full instructions
+
+[Unit]
+Description=Simple Webcam Recorder (ARM)
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/simple-webcam-recorder
+Environment="PATH=/opt/simple-webcam-recorder/venv/bin"
+ExecStart=/opt/simple-webcam-recorder/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 wsgi:app
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
