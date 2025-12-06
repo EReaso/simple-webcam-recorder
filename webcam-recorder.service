@@ -1,0 +1,15 @@
+[Unit]
+Description=Simple Webcam Recorder
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/simple-webcam-recorder
+Environment="PATH=/opt/simple-webcam-recorder/venv/bin"
+ExecStart=/opt/simple-webcam-recorder/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 wsgi:app
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

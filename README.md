@@ -130,27 +130,314 @@ WORKERS=8 ./entrypoint.sh
 
 When using Docker (recommended), Gunicorn is used automatically and the number of workers can be configured via the `WORKERS` environment variable. The development server (`python run.py`) is only for local testing.
 
+## Running as a System Service
+
+To automatically start the webcam recorder on boot and run it as a background service, you can use **systemd** (Linux) to manage the application. This section provides step-by-step instructions for both Docker and native Python deployments.
+
+### Option 1: Running as a Service with Docker (Recommended)
+
+This method uses Docker Compose and is the simplest approach for production deployments.
+
+#### 1. Install the application
+
+```bash
+# Clone the repository to a permanent location
+sudo mkdir -p /opt/simple-webcam-recorder
+cd /opt/simple-webcam-recorder
+sudo git clone https://github.com/EReaso/simple-webcam-recorder.git .
+
+# Configure environment variables (optional)
+sudo cp .env.example .env
+sudo nano .env  # Adjust settings as needed
+```
+
+#### 2. Create the systemd service file
+
+```bash
+sudo nano /etc/systemd/system/webcam-recorder.service
+```
+
+Add the following content (also available in `webcam-recorder-docker.service`):
+
+```ini
+[Unit]
+Description=Simple Webcam Recorder (Docker)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/simple-webcam-recorder
+ExecStart=/usr/bin/docker-compose up -d
+ExecStop=/usr/bin/docker-compose down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### 3. Enable and start the service
+
+```bash
+# Reload systemd to recognize the new service
+sudo systemctl daemon-reload
+
+# Enable the service to start on boot
+sudo systemctl enable webcam-recorder.service
+
+# Start the service now
+sudo systemctl start webcam-recorder.service
+
+# Check service status
+sudo systemctl status webcam-recorder.service
+```
+
+#### 4. Manage the service
+
+```bash
+# View logs
+sudo journalctl -u webcam-recorder.service -f
+
+# Or view Docker Compose logs
+cd /opt/simple-webcam-recorder
+sudo docker-compose logs -f
+
+# Stop the service
+sudo systemctl stop webcam-recorder.service
+
+# Restart the service
+sudo systemctl restart webcam-recorder.service
+
+# Disable auto-start on boot
+sudo systemctl disable webcam-recorder.service
+```
+
+### Option 2: Running as a Service with Native Python
+
+This method runs the application directly with Python and Gunicorn without Docker.
+
+#### 1. Install the application
+
+```bash
+# Clone the repository to a permanent location
+sudo mkdir -p /opt/simple-webcam-recorder
+cd /opt/simple-webcam-recorder
+sudo git clone https://github.com/EReaso/simple-webcam-recorder.git .
+
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment variables
+cp .env.example .env
+nano .env  # Set FLASK_ENV=production and DEBUG=False
+
+# Create recordings directory
+mkdir -p recordings
+```
+
+#### 2. Create the systemd service file
+
+```bash
+sudo nano /etc/systemd/system/webcam-recorder.service
+```
+
+Add the following content (also available in `webcam-recorder.service`):
+
+```ini
+[Unit]
+Description=Simple Webcam Recorder
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/simple-webcam-recorder
+Environment="PATH=/opt/simple-webcam-recorder/venv/bin"
+ExecStart=/opt/simple-webcam-recorder/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 wsgi:app
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Note:** You may need to adjust the `User` directive based on your system. Common options:
+- `www-data` (Debian/Ubuntu)
+- `nginx` or `http` (some systems)
+- Your username (for development/testing)
+
+#### 3. Set up permissions
+
+```bash
+# Option A: Run as www-data user (recommended for production)
+sudo chown -R www-data:www-data /opt/simple-webcam-recorder
+sudo usermod -a -G video www-data  # Grant webcam access
+
+# Option B: Run as your user (simpler for testing)
+# Change User=www-data to User=yourusername in the service file
+sudo chown -R $USER:$USER /opt/simple-webcam-recorder
+```
+
+#### 4. Enable and start the service
+
+```bash
+# Reload systemd to recognize the new service
+sudo systemctl daemon-reload
+
+# Enable the service to start on boot
+sudo systemctl enable webcam-recorder.service
+
+# Start the service now
+sudo systemctl start webcam-recorder.service
+
+# Check service status
+sudo systemctl status webcam-recorder.service
+```
+
+#### 5. Manage the service
+
+```bash
+# View logs
+sudo journalctl -u webcam-recorder.service -f
+
+# Stop the service
+sudo systemctl stop webcam-recorder.service
+
+# Restart the service
+sudo systemctl restart webcam-recorder.service
+
+# Disable auto-start on boot
+sudo systemctl disable webcam-recorder.service
+```
+
+### Service Configuration Tips
+
+#### Adjusting Worker Count
+
+For better performance, adjust the number of Gunicorn workers based on your CPU:
+
+- **Recommended formula:** `(2 × CPU_cores) + 1`
+- For a 4-core CPU: 9 workers
+- For a 2-core CPU: 5 workers
+- For Raspberry Pi: 2-3 workers (limited resources)
+
+**Docker method:** Edit `docker-compose.yml` or set environment variable:
+```yaml
+environment:
+  - WORKERS=9
+```
+
+**Native Python method:** Edit the service file:
+```ini
+ExecStart=/opt/simple-webcam-recorder/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 9 --timeout 120 wsgi:app
+```
+
+#### Changing the Port
+
+**Docker method:** Edit `docker-compose.yml`:
+```yaml
+ports:
+  - "8080:5000"  # Change 8080 to your desired port
+```
+
+**Native Python method:** Edit the service file:
+```ini
+ExecStart=/opt/simple-webcam-recorder/venv/bin/gunicorn --bind 0.0.0.0:8080 --workers 4 --timeout 120 wsgi:app
+```
+
+### Troubleshooting Service Issues
+
+#### Service fails to start
+
+1. **Check the service status and logs:**
+   ```bash
+   sudo systemctl status webcam-recorder.service
+   sudo journalctl -u webcam-recorder.service -n 50
+   ```
+
+2. **Verify file permissions:**
+   ```bash
+   ls -la /opt/simple-webcam-recorder
+   # Ensure the service user has read/write access
+   ```
+
+3. **Test manually before enabling the service:**
+   ```bash
+   # For Docker
+   cd /opt/simple-webcam-recorder
+   docker-compose up
+   
+   # For native Python
+   cd /opt/simple-webcam-recorder
+   source venv/bin/activate
+   gunicorn --bind 0.0.0.0:5000 --workers 4 wsgi:app
+   ```
+
+#### Camera not accessible
+
+1. **Ensure the service user is in the video group:**
+   ```bash
+   sudo usermod -a -G video www-data  # Or your service user
+   ```
+
+2. **Check camera device permissions:**
+   ```bash
+   ls -la /dev/video*
+   # Should show rw-rw---- or similar with video group
+   ```
+
+3. **For Docker, verify device mapping** in `docker-compose.yml`:
+   ```yaml
+   devices:
+     - /dev/video0:/dev/video0
+   ```
+
+#### Port already in use
+
+1. **Find what's using the port:**
+   ```bash
+   sudo lsof -i :5000
+   ```
+
+2. **Stop the conflicting service or change the port** (see "Changing the Port" above)
+
+#### Recordings directory permission denied
+
+```bash
+# Ensure the service user can write to recordings directory
+sudo chown -R www-data:www-data /opt/simple-webcam-recorder/recordings
+sudo chmod -R 755 /opt/simple-webcam-recorder/recordings
+```
+
 ## Project Structure
 
 ```
 simple-webcam-recorder/
 ├── app/
-│   ├── __init__.py          # Flask application initialization
-│   ├── routes.py            # Application routes (using blueprints)
-│   ├── camera.py            # Camera service for streaming/recording
+│   ├── __init__.py                 # Flask application initialization
+│   ├── routes.py                   # Application routes (using blueprints)
+│   ├── camera.py                   # Camera service for streaming/recording
 │   └── templates/
-│       └── index.html       # Main web interface
-├── recordings/              # Directory for saved videos
-├── config.py                # Configuration settings
-├── run.py                   # Development server entry point
-├── wsgi.py                  # Production WSGI entry point
-├── entrypoint.sh            # Production startup script
-├── requirements.txt         # Python dependencies
-├── Dockerfile               # Docker image configuration
-├── docker-compose.yml       # Docker Compose setup
-├── .dockerignore           # Docker ignore rules
-├── .env.example            # Example environment configuration
-└── README.md               # This file
+│       └── index.html              # Main web interface
+├── recordings/                     # Directory for saved videos
+├── config.py                       # Configuration settings
+├── run.py                          # Development server entry point
+├── wsgi.py                         # Production WSGI entry point
+├── entrypoint.sh                   # Production startup script
+├── requirements.txt                # Python dependencies
+├── Dockerfile                      # Docker image configuration
+├── docker-compose.yml              # Docker Compose setup
+├── webcam-recorder.service         # systemd service file (native Python)
+├── webcam-recorder-docker.service  # systemd service file (Docker)
+├── .dockerignore                   # Docker ignore rules
+├── .env.example                    # Example environment configuration
+└── README.md                       # This file
 ```
 
 ## API Endpoints
