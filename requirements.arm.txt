@@ -1,6 +1,0 @@
-Flask==3.0.0
-# Using opencv-python-headless for better ARM/Raspberry Pi compatibility
-# This version doesn't include GUI components (Qt, GTK) which are often problematic on ARM
-opencv-python-headless==4.8.1.78
-numpy==1.26.2
-gunicorn==23.0.0
