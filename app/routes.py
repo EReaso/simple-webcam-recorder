@@ -5,15 +5,6 @@ import os
 # Create blueprint for main routes
 main_bp = Blueprint('main', __name__)
 
-# Camera instance will be set by app initialization
-camera = None
-
-
-def init_camera(cam):
-    """Initialize the camera instance for routes."""
-    global camera
-    camera = cam
-
 
 @main_bp.route('/')
 def index():
@@ -24,6 +15,7 @@ def index():
 @main_bp.route('/video_feed')
 def video_feed():
     """Video streaming route."""
+    camera = current_app.config['camera']
     return Response(
         camera.generate_frames(),
         mimetype='multipart/x-mixed-replace; boundary=frame'
@@ -33,6 +25,7 @@ def video_feed():
 @main_bp.route('/api/recording/start', methods=['POST'])
 def start_recording():
     """Start recording endpoint."""
+    camera = current_app.config['camera']
     filename = camera.start_recording()
     if filename:
         return jsonify({
@@ -50,6 +43,7 @@ def start_recording():
 @main_bp.route('/api/recording/stop', methods=['POST'])
 def stop_recording():
     """Stop recording endpoint."""
+    camera = current_app.config['camera']
     filename = camera.stop_recording()
     if filename:
         return jsonify({
@@ -67,6 +61,7 @@ def stop_recording():
 @main_bp.route('/api/recording/status', methods=['GET'])
 def recording_status():
     """Get recording status endpoint."""
+    camera = current_app.config['camera']
     status = camera.get_recording_status()
     return jsonify(status)
 

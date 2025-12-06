@@ -2,7 +2,7 @@
 from flask import Flask
 from config import config
 from app.camera import get_camera
-from app.routes import main_bp, init_camera
+from app.routes import main_bp
 import os
 
 
@@ -13,9 +13,9 @@ app = Flask(__name__)
 config_name = os.environ.get('FLASK_ENV', 'default')
 app.config.from_object(config[config_name])
 
-# Initialize camera
+# Initialize camera and store in app config for access by routes
 camera = get_camera(app.config)
-init_camera(camera)
+app.config['camera'] = camera
 
 # Register blueprints
 app.register_blueprint(main_bp)
