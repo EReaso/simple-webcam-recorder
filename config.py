@@ -1,10 +1,13 @@
 """Configuration settings for the webcam recorder application."""
 import os
+import secrets
 
 
 class Config:
     """Base configuration."""
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    # Generate a random secret key on startup if not provided
+    # This ensures each instance has a unique secret key
+    SECRET_KEY = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
     
     # Camera settings
     CAMERA_INDEX = int(os.environ.get('CAMERA_INDEX', 0))
@@ -39,5 +42,5 @@ class ProductionConfig(Config):
 config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
-    'default': DevelopmentConfig
+    'default': ProductionConfig  # Default to production for deployments
 }

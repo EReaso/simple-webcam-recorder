@@ -1,4 +1,6 @@
 Flask==3.0.0
-opencv-python==4.8.1.78
+# Using opencv-python-headless for multi-arch compatibility (x86_64 and ARM)
+# This version doesn't include GUI components which are not needed for Docker deployments
+opencv-python-headless==4.8.1.78
 numpy==1.26.2
 gunicorn==23.0.0
