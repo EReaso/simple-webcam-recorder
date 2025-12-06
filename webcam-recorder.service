@@ -1,3 +1,7 @@
+# Simple Webcam Recorder - systemd service file (native Python)
+# This is a template - adjust User and paths as needed for your system
+# See README.md "Running as a System Service" section for full instructions
+
 [Unit]
 Description=Simple Webcam Recorder
 After=network.target

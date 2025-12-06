@@ -1,3 +1,7 @@
+# Simple Webcam Recorder - systemd service file (Docker)
+# This is a template - adjust WorkingDirectory if you install to a different location
+# See README.md "Running as a System Service" section for full instructions
+
 [Unit]
 Description=Simple Webcam Recorder (Docker)
 Requires=docker.service
