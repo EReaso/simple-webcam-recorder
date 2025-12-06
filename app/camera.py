@@ -22,10 +22,10 @@ class Camera:
     def initialize(self):
         """Initialize the camera."""
         if self.camera is None:
-            self.camera = cv2.VideoCapture(self.config.CAMERA_INDEX)
-            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.config.CAMERA_WIDTH)
-            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config.CAMERA_HEIGHT)
-            self.camera.set(cv2.CAP_PROP_FPS, self.config.CAMERA_FPS)
+            self.camera = cv2.VideoCapture(self.config['CAMERA_INDEX'])
+            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.config['CAMERA_WIDTH'])
+            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config['CAMERA_HEIGHT'])
+            self.camera.set(cv2.CAP_PROP_FPS, self.config['CAMERA_FPS'])
             
     def get_frame(self):
         """Get the current frame from the camera."""
@@ -63,20 +63,20 @@ class Camera:
             self.initialize()
             
             # Create recordings directory if it doesn't exist
-            os.makedirs(self.config.RECORDINGS_DIR, exist_ok=True)
+            os.makedirs(self.config['RECORDINGS_DIR'], exist_ok=True)
             
             # Generate filename with timestamp
             timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            self.recording_filename = f'recording_{timestamp}.{self.config.VIDEO_FORMAT}'
-            filepath = os.path.join(self.config.RECORDINGS_DIR, self.recording_filename)
+            self.recording_filename = f'recording_{timestamp}.{self.config["VIDEO_FORMAT"]}'
+            filepath = os.path.join(self.config['RECORDINGS_DIR'], self.recording_filename)
             
             # Initialize video writer
-            fourcc = cv2.VideoWriter_fourcc(*self.config.VIDEO_CODEC)
+            fourcc = cv2.VideoWriter_fourcc(*self.config['VIDEO_CODEC'])
             self.video_writer = cv2.VideoWriter(
                 filepath,
                 fourcc,
-                self.config.CAMERA_FPS,
-                (self.config.CAMERA_WIDTH, self.config.CAMERA_HEIGHT)
+                self.config['CAMERA_FPS'],
+                (self.config['CAMERA_WIDTH'], self.config['CAMERA_HEIGHT'])
             )
             
             self.is_recording = True
