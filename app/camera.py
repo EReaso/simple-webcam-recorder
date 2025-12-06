@@ -3,6 +3,7 @@ import cv2
 import threading
 import datetime
 import os
+import numpy as np
 from typing import Optional
 
 
@@ -18,32 +19,116 @@ class Camera:
         self.lock = threading.Lock()
         self.frame = None
         self.recording_filename = None
+        self.camera_error = None
+        self.error_frame = None
+        
+    def create_error_frame(self, message: str) -> bytes:
+        """Create an error frame with a message."""
+        width = self.config['CAMERA_WIDTH']
+        height = self.config['CAMERA_HEIGHT']
+        
+        # Create a dark gray background
+        frame = np.zeros((height, width, 3), dtype=np.uint8)
+        frame[:] = (50, 50, 50)
+        
+        # Add error icon (red X)
+        center_x, center_y = width // 2, height // 3
+        size = min(width, height) // 6
+        cv2.line(frame, (center_x - size, center_y - size), 
+                (center_x + size, center_y + size), (0, 0, 255), 5)
+        cv2.line(frame, (center_x + size, center_y - size), 
+                (center_x - size, center_y + size), (0, 0, 255), 5)
+        
+        # Add text
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.7
+        font_thickness = 2
+        color = (255, 255, 255)
+        
+        # Split message into lines
+        lines = message.split('\n')
+        line_height = 30
+        start_y = center_y + size + 40
+        
+        for i, line in enumerate(lines):
+            text_size = cv2.getTextSize(line, font, font_scale, font_thickness)[0]
+            text_x = (width - text_size[0]) // 2
+            text_y = start_y + i * line_height
+            cv2.putText(frame, line, (text_x, text_y), font, font_scale, color, font_thickness)
+        
+        # Encode to JPEG
+        ret, buffer = cv2.imencode('.jpg', frame)
+        if ret:
+            return buffer.tobytes()
+        return None
         
     def initialize(self):
         """Initialize the camera."""
         if self.camera is None:
-            self.camera = cv2.VideoCapture(self.config['CAMERA_INDEX'])
-            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.config['CAMERA_WIDTH'])
-            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config['CAMERA_HEIGHT'])
-            self.camera.set(cv2.CAP_PROP_FPS, self.config['CAMERA_FPS'])
+            try:
+                self.camera = cv2.VideoCapture(self.config['CAMERA_INDEX'])
+                
+                # Check if camera opened successfully
+                if not self.camera.isOpened():
+                    self.camera_error = f"Camera Error\nCannot open camera at index {self.config['CAMERA_INDEX']}\nCheck device permissions and connections"
+                    self.camera = None
+                    return
+                
+                self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.config['CAMERA_WIDTH'])
+                self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config['CAMERA_HEIGHT'])
+                self.camera.set(cv2.CAP_PROP_FPS, self.config['CAMERA_FPS'])
+                
+                # Clear any previous errors
+                self.camera_error = None
+            except Exception as e:
+                self.camera_error = f"Camera Error\n{str(e)}\nCheck device permissions and connections"
+                self.camera = None
             
     def get_frame(self):
         """Get the current frame from the camera."""
         self.initialize()
         
+        # If camera initialization failed or camera has an error, return error frame
+        if self.camera_error:
+            if self.error_frame is None:
+                self.error_frame = self.create_error_frame(self.camera_error)
+            return self.error_frame
+        
+        # If camera is not available, return error frame
+        if self.camera is None:
+            error_msg = "Camera Error\nCamera not initialized\nCheck device permissions and connections"
+            if self.error_frame is None:
+                self.error_frame = self.create_error_frame(error_msg)
+            return self.error_frame
+        
         with self.lock:
-            success, frame = self.camera.read()
-            if success:
-                self.frame = frame.copy()
-                
-                # If recording, write the frame
-                if self.is_recording and self.video_writer is not None:
-                    self.video_writer.write(frame)
-                
-                # Encode frame to JPEG
-                ret, buffer = cv2.imencode('.jpg', frame)
-                if ret:
-                    return buffer.tobytes()
+            try:
+                success, frame = self.camera.read()
+                if success:
+                    self.frame = frame.copy()
+                    
+                    # Clear error frame cache since we got a successful read
+                    self.error_frame = None
+                    
+                    # If recording, write the frame
+                    if self.is_recording and self.video_writer is not None:
+                        self.video_writer.write(frame)
+                    
+                    # Encode frame to JPEG
+                    ret, buffer = cv2.imencode('.jpg', frame)
+                    if ret:
+                        return buffer.tobytes()
+                else:
+                    # Camera read failed, create error frame
+                    error_msg = "Camera Error\nFailed to read from camera\nCheck if device is in use or disconnected"
+                    self.error_frame = self.create_error_frame(error_msg)
+                    return self.error_frame
+            except Exception as e:
+                # Handle any other exceptions during frame reading
+                error_msg = f"Camera Error\n{str(e)}\nCheck device permissions and connections"
+                self.error_frame = self.create_error_frame(error_msg)
+                return self.error_frame
+        
         return None
     
     def generate_frames(self):
