@@ -22,7 +22,7 @@ class Camera:
         self.camera_error = None
         self.error_frame = None
         
-    def create_error_frame(self, message: str) -> bytes:
+    def create_error_frame(self, message: str) -> Optional[bytes]:
         """Create an error frame with a message."""
         width = self.config['CAMERA_WIDTH']
         height = self.config['CAMERA_HEIGHT']
@@ -92,6 +92,9 @@ class Camera:
         if self.camera_error:
             if self.error_frame is None:
                 self.error_frame = self.create_error_frame(self.camera_error)
+            # If error frame creation failed, try to create a minimal fallback
+            if self.error_frame is None:
+                return self.create_error_frame("Camera Error\nUnable to display error details")
             return self.error_frame
         
         # If camera is not available, return error frame
@@ -99,6 +102,9 @@ class Camera:
             error_msg = "Camera Error\nCamera not initialized\nCheck device permissions and connections"
             if self.error_frame is None:
                 self.error_frame = self.create_error_frame(error_msg)
+            # If error frame creation failed, try to create a minimal fallback
+            if self.error_frame is None:
+                return self.create_error_frame("Camera Error\nUnable to display error details")
             return self.error_frame
         
         with self.lock:
@@ -107,8 +113,10 @@ class Camera:
                 if success:
                     self.frame = frame.copy()
                     
-                    # Clear error frame cache since we got a successful read
+                    # Clear error frame cache and error state since we got a successful read
                     self.error_frame = None
+                    if self.camera_error:
+                        self.camera_error = None
                     
                     # If recording, write the frame
                     if self.is_recording and self.video_writer is not None:
@@ -121,15 +129,22 @@ class Camera:
                 else:
                     # Camera read failed, create error frame
                     error_msg = "Camera Error\nFailed to read from camera\nCheck if device is in use or disconnected"
-                    self.error_frame = self.create_error_frame(error_msg)
-                    return self.error_frame
+                    error_frame = self.create_error_frame(error_msg)
+                    # Cache it for reuse
+                    if error_frame is not None:
+                        self.error_frame = error_frame
+                    return error_frame if error_frame else self.create_error_frame("Camera Error")
             except Exception as e:
                 # Handle any other exceptions during frame reading
                 error_msg = f"Camera Error\n{str(e)}\nCheck device permissions and connections"
-                self.error_frame = self.create_error_frame(error_msg)
-                return self.error_frame
+                error_frame = self.create_error_frame(error_msg)
+                # Cache it for reuse
+                if error_frame is not None:
+                    self.error_frame = error_frame
+                return error_frame if error_frame else self.create_error_frame("Camera Error")
         
-        return None
+        # Fallback: return a basic error frame
+        return self.create_error_frame("Camera Error\nUnknown error occurred")
     
     def generate_frames(self):
         """Generator function for streaming frames."""
