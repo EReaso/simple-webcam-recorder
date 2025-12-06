@@ -355,6 +355,101 @@ ports:
 ExecStart=/opt/simple-webcam-recorder/venv/bin/gunicorn --bind 0.0.0.0:8080 --workers 4 --timeout 120 wsgi:app
 ```
 
+### ARM/Raspberry Pi Deployment
+
+Running as a service on ARM-based devices like Raspberry Pi requires some adjustments due to limited resources.
+
+#### Docker Method (Recommended for Raspberry Pi)
+
+1. **Use the standard Docker deployment** as described in Option 1 above, but adjust the worker count:
+
+   Edit `docker-compose.yml` or create a `.env` file with:
+   ```bash
+   WORKERS=2
+   ```
+
+2. **Follow the Docker service setup** from Option 1 (steps 1-4)
+
+#### Native Python Method for ARM/Raspberry Pi
+
+For ARM devices, use `opencv-python-headless` instead of `opencv-python` for better compatibility:
+
+1. **Install the application:**
+   ```bash
+   # Clone the repository to a permanent location
+   sudo mkdir -p /opt/simple-webcam-recorder
+   cd /opt/simple-webcam-recorder
+   sudo git clone https://github.com/EReaso/simple-webcam-recorder.git .
+   
+   # Set ownership to your user for installation
+   sudo chown -R $USER:$USER /opt/simple-webcam-recorder
+   
+   # Create and activate virtual environment
+   python3 -m venv venv
+   source venv/bin/activate
+   
+   # Install ARM-optimized dependencies
+   pip install Flask==3.0.0
+   pip install opencv-python-headless==4.8.1.78
+   pip install numpy==1.26.2
+   pip install gunicorn==23.0.0
+   
+   # Configure environment variables
+   cp .env.example .env
+   nano .env  # Set FLASK_ENV=production, DEBUG=False, and WORKERS=2
+   
+   # Create recordings directory
+   mkdir -p recordings
+   ```
+
+2. **Create the systemd service file:**
+   ```bash
+   sudo nano /etc/systemd/system/webcam-recorder.service
+   ```
+
+   Use this ARM-optimized configuration:
+   ```ini
+   [Unit]
+   Description=Simple Webcam Recorder (ARM)
+   After=network.target
+   
+   [Service]
+   Type=simple
+   User=pi
+   WorkingDirectory=/opt/simple-webcam-recorder
+   Environment="PATH=/opt/simple-webcam-recorder/venv/bin"
+   ExecStart=/opt/simple-webcam-recorder/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 120 wsgi:app
+   Restart=always
+   RestartSec=10
+   
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+   **Note:** Change `User=pi` to your Raspberry Pi username if different.
+
+3. **Set up permissions:**
+   ```bash
+   # Keep ownership with your user (typically 'pi' on Raspberry Pi)
+   sudo chown -R $USER:$USER /opt/simple-webcam-recorder
+   sudo usermod -a -G video $USER  # Grant webcam access
+   ```
+
+4. **Enable and start the service:**
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable webcam-recorder.service
+   sudo systemctl start webcam-recorder.service
+   sudo systemctl status webcam-recorder.service
+   ```
+
+#### ARM/Raspberry Pi Performance Tips
+
+- **Use 2 workers maximum** - Raspberry Pi has limited CPU and memory
+- **Consider lowering resolution** - Set `CAMERA_WIDTH=320` and `CAMERA_HEIGHT=240` in `.env` for better performance
+- **Monitor temperature** - Use `vcgencmd measure_temp` on Raspberry Pi to check temperature
+- **Use headless OpenCV** - `opencv-python-headless` uses less memory than standard `opencv-python`
+
 ### Troubleshooting Service Issues
 
 #### Service fails to start
@@ -439,6 +534,7 @@ simple-webcam-recorder/
 ├── docker-compose.yml              # Docker Compose setup
 ├── webcam-recorder.service         # systemd service file (native Python)
 ├── webcam-recorder-docker.service  # systemd service file (Docker)
+├── webcam-recorder-arm.service     # systemd service file (ARM/Raspberry Pi)
 ├── .dockerignore                   # Docker ignore rules
 ├── .env.example                    # Example environment configuration
 └── README.md                       # This file
