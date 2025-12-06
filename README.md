@@ -79,6 +79,7 @@ cp .env.example .env
 | `HOST` | Server host address | `0.0.0.0` |
 | `PORT` | Server port | `5000` |
 | `DEBUG` | Enable debug mode | `True` |
+| `WORKERS` | Number of Gunicorn worker processes | `4` |
 
 ## Usage
 
@@ -115,6 +116,20 @@ http://localhost:5000
    - Start/stop video recording
    - View list of recorded videos
 
+### Production Deployment
+
+For production use, the application uses **Gunicorn** (a production-grade WSGI server) instead of Flask's development server:
+
+```bash
+# Production deployment with Gunicorn (default 4 workers)
+gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 wsgi:app
+
+# Or configure workers via environment variable
+WORKERS=8 ./entrypoint.sh
+```
+
+When using Docker (recommended), Gunicorn is used automatically and the number of workers can be configured via the `WORKERS` environment variable. The development server (`python run.py`) is only for local testing.
+
 ## Project Structure
 
 ```
@@ -127,7 +142,9 @@ simple-webcam-recorder/
 │       └── index.html       # Main web interface
 ├── recordings/              # Directory for saved videos
 ├── config.py                # Configuration settings
-├── run.py                   # Application entry point
+├── run.py                   # Development server entry point
+├── wsgi.py                  # Production WSGI entry point
+├── entrypoint.sh            # Production startup script
 ├── requirements.txt         # Python dependencies
 ├── Dockerfile               # Docker image configuration
 ├── docker-compose.yml       # Docker Compose setup

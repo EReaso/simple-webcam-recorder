@@ -213,19 +213,22 @@ volumes:
 
 ## Production Deployment
 
-For production use, consider:
+The application is **already configured for production** when using Docker:
 
-1. **Use a production WSGI server** (Gunicorn, uWSGI):
+1. **Production WSGI server**: The Dockerfile uses **Gunicorn** instead of Flask's development server:
    ```dockerfile
-   CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:create_app()"]
+   CMD ["./entrypoint.sh"]  # Uses WORKERS env var (default: 4)
    ```
 
-2. **Set production environment**:
+2. **Production environment**: Configure in `docker-compose.yml`:
    ```yaml
    environment:
      - FLASK_ENV=production
      - DEBUG=False
+     - WORKERS=4  # Adjust based on CPU cores (recommended: 2-4 × CPU cores)
    ```
+
+For additional production hardening, consider:
 
 3. **Add HTTPS** using a reverse proxy (nginx, Traefik)
 
