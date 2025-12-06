@@ -67,7 +67,9 @@ class Camera:
             text_size = cv2.getTextSize(line, font, font_scale, font_thickness)[0]
             text_x = (width - text_size[0]) // 2
             text_y = start_y + i * line_height
-            cv2.putText(frame, line, (text_x, text_y), font, font_scale, color, font_thickness)
+            # Ensure text stays within frame boundaries
+            if text_y + 10 < height:  # Leave margin at bottom
+                cv2.putText(frame, line, (text_x, text_y), font, font_scale, color, font_thickness)
         
         # Encode to JPEG
         ret, buffer = cv2.imencode('.jpg', frame)
