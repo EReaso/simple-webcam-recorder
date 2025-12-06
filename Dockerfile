@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 
 # Install system dependencies for OpenCV
+# Using opencv-python-headless for better multi-arch compatibility (x86_64 and ARM)
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     libsm6 \
@@ -8,6 +9,10 @@ RUN apt-get update && apt-get install -y \
     libxrender-dev \
     libgomp1 \
     libgl1 \
+    libgstreamer1.0-0 \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
