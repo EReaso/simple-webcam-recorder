@@ -29,7 +29,6 @@ RUN mkdir -p recordings
 EXPOSE 5000
 
 # Set environment variables
-ENV FLASK_ENV=development
 ENV PYTHONUNBUFFERED=1
 
 # Run the application

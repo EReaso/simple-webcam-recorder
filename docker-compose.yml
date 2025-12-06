@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   webcam-recorder:
     build: .
@@ -8,8 +6,8 @@ services:
     volumes:
       # Mount recordings directory to persist recordings
       - ./recordings:/app/recordings
-      # Mount .env file for custom configuration
-      - ./.env:/app/.env:ro
+    # Optional: Uncomment to use custom .env file
+    #  - ./.env:/app/.env:ro
     devices:
       # Grant access to webcam devices
       # Adjust device path based on your system (e.g., /dev/video0)
