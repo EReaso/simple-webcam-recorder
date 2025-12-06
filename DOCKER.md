@@ -19,10 +19,15 @@ This guide explains how to run the Simple Webcam Recorder using Docker.
 2. **Start the application:**
    ```bash
    docker-compose up
+   
+   # For Raspberry Pi / ARM systems:
+   # docker-compose -f docker-compose.arm.yml up
    ```
 
 3. **Access the web interface:**
    Open your browser to `http://localhost:5000`
+
+> **Note:** For Raspberry Pi and ARM-based systems, see the [Raspberry Pi Setup Guide](RASPBERRY_PI.md) for optimized configuration and performance tuning.
 
 ## Docker Commands
 
@@ -198,6 +203,13 @@ volumes:
 - Camera devices are typically `/dev/video0`, `/dev/video1`, etc.
 - May need to add user to `video` group
 - Works out of the box with Docker Engine
+
+### Raspberry Pi / ARM
+
+- **Use ARM-optimized configuration**: `docker-compose -f docker-compose.arm.yml up`
+- Lower resource requirements (2 workers recommended)
+- Better performance with `opencv-python-headless`
+- See [Raspberry Pi Setup Guide](RASPBERRY_PI.md) for detailed instructions
 
 ### macOS
 
