@@ -28,7 +28,7 @@ A plug-and-play Flask web application for recording and streaming USB webcam vid
 
 2. **Start the application:**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 3. **Access the web interface:**
@@ -115,19 +115,19 @@ On macOS and Windows, webcam device mapping may differ from Linux. Refer to Dock
 
 ```bash
 # Start in foreground (see logs in terminal)
-docker-compose up
+docker compose up
 
 # Start in background (detached mode)
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop the application
-docker-compose down
+docker compose down
 
 # Rebuild after code changes
-docker-compose up --build
+docker compose up --build
 ```
 
 ## Running as a System Service
@@ -158,8 +158,8 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/simple-webcam-recorder
-ExecStart=/usr/bin/docker-compose up -d
-ExecStop=/usr/bin/docker-compose down
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
 TimeoutStartSec=0
 
 [Install]
