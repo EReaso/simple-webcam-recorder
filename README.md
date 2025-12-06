@@ -226,6 +226,9 @@ sudo mkdir -p /opt/simple-webcam-recorder
 cd /opt/simple-webcam-recorder
 sudo git clone https://github.com/EReaso/simple-webcam-recorder.git .
 
+# Set ownership to your user for installation
+sudo chown -R $USER:$USER /opt/simple-webcam-recorder
+
 # Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
@@ -280,8 +283,9 @@ sudo chown -R www-data:www-data /opt/simple-webcam-recorder
 sudo usermod -a -G video www-data  # Grant webcam access
 
 # Option B: Run as your user (simpler for testing)
-# Change User=www-data to User=yourusername in the service file
-sudo chown -R $USER:$USER /opt/simple-webcam-recorder
+# Change User=www-data to User=$USER in the service file above
+# Then keep current ownership
+sudo usermod -a -G video $USER  # Grant webcam access
 ```
 
 #### 4. Enable and start the service
