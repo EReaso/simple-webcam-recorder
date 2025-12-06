@@ -23,6 +23,7 @@ class Config:
     HOST = os.environ.get('HOST', '0.0.0.0')
     PORT = int(os.environ.get('PORT', 5000))
     DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+    WORKERS = int(os.environ.get('WORKERS', 4))  # Number of Gunicorn workers
 
 
 class DevelopmentConfig(Config):

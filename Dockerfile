@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Make entrypoint script executable
+RUN chmod +x entrypoint.sh
+
 # Create recordings directory
 RUN mkdir -p recordings
 
@@ -32,4 +35,5 @@ EXPOSE 5000
 ENV PYTHONUNBUFFERED=1
 
 # Run the application with Gunicorn (production WSGI server)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "wsgi:app"]
+# The entrypoint script reads WORKERS env variable to configure worker count
+CMD ["./entrypoint.sh"]

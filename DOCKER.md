@@ -217,14 +217,15 @@ The application is **already configured for production** when using Docker:
 
 1. **Production WSGI server**: The Dockerfile uses **Gunicorn** instead of Flask's development server:
    ```dockerfile
-   CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "wsgi:app"]
+   CMD ["./entrypoint.sh"]  # Uses WORKERS env var (default: 4)
    ```
 
-2. **Production environment**: Update `docker-compose.yml` if needed:
+2. **Production environment**: Configure in `docker-compose.yml`:
    ```yaml
    environment:
      - FLASK_ENV=production
      - DEBUG=False
+     - WORKERS=4  # Adjust based on CPU cores (recommended: 2-4 × CPU cores)
    ```
 
 For additional production hardening, consider:
