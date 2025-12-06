@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Recordings (mounted as volume)
+recordings/*.mp4
+recordings/*.avi
+recordings/*.mov
+
+# Environment files (use volume mount instead)
+.env
+
+# Docker files (not needed in image)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation (keep images small, docs available in repo)
+README.md
+STREAMING.md
+DOCKER.md
+LICENSE

@@ -13,11 +13,30 @@ A configurable Flask web server for recording and streaming USB webcam video. Fe
 
 ## Requirements
 
-- Python 3.7 or higher
+- Python 3.7 or higher (or Docker)
 - USB webcam
 - Linux, macOS, or Windows
 
-## Installation
+## Quick Start with Docker (Recommended)
+
+The easiest way to run the application is using Docker:
+
+1. Clone the repository:
+```bash
+git clone https://github.com/EReaso/simple-webcam-recorder.git
+cd simple-webcam-recorder
+```
+
+2. Start with Docker Compose:
+```bash
+docker-compose up
+```
+
+3. Open your browser to `http://localhost:5000`
+
+**Note:** On Linux, you may need to adjust the webcam device in `docker-compose.yml` if your camera is not at `/dev/video0`. Use `ls /dev/video*` to find your device.
+
+## Installation (Without Docker)
 
 1. Clone the repository:
 ```bash
@@ -63,6 +82,24 @@ cp .env.example .env
 
 ## Usage
 
+### With Docker
+
+```bash
+# Start the application
+docker-compose up
+
+# Start in background (detached mode)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the application
+docker-compose down
+```
+
+### Without Docker
+
 1. Start the server:
 ```bash
 python run.py
@@ -91,6 +128,9 @@ simple-webcam-recorder/
 ├── config.py                # Configuration settings
 ├── run.py                   # Application entry point
 ├── requirements.txt         # Python dependencies
+├── Dockerfile               # Docker image configuration
+├── docker-compose.yml       # Docker Compose setup
+├── .dockerignore           # Docker ignore rules
 ├── .env.example            # Example environment configuration
 └── README.md               # This file
 ```
@@ -117,6 +157,29 @@ app = create_app('development')
 ```
 
 ## Troubleshooting
+
+### Docker-specific issues
+
+#### Camera not accessible in Docker
+- On Linux, ensure the webcam device is mapped correctly in `docker-compose.yml`
+- Check available devices: `ls /dev/video*`
+- You may need to run Docker with privileged mode for some systems:
+  ```yaml
+  privileged: true
+  ```
+
+#### Permission denied for webcam in Docker
+- On Linux, add your user to the `video` group:
+  ```bash
+  sudo usermod -a -G video $USER
+  ```
+- Run Docker containers with the video group:
+  ```yaml
+  group_add:
+    - video
+  ```
+
+### General troubleshooting
 
 ### Camera not found
 - Ensure your webcam is connected
