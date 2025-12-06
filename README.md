@@ -213,7 +213,9 @@ ports:
 
 ## Security
 
-- **SECRET_KEY**: Automatically generated randomly on each startup. No manual configuration needed.
+- **SECRET_KEY**: Automatically generated randomly on each startup for maximum security. No manual configuration needed.
+  - Note: User sessions will be invalidated on application restart. This is intentional for a stateless, plug-and-play deployment.
+  - To persist sessions across restarts, set a `SECRET_KEY` environment variable in docker-compose.yml.
 - **Production mode**: Enabled by default with debug mode disabled.
 - **Container isolation**: The application runs in an isolated Docker container.
 
