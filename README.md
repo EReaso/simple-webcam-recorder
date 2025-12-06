@@ -13,7 +13,7 @@ A configurable Flask web server for recording and streaming USB webcam video. Fe
 
 ## Requirements
 
-- Python 3.7 or higher (or Docker)
+- Python 3.9 or higher (or Docker)
 - USB webcam
 - Linux, macOS, or Windows
 
