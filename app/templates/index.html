@@ -223,12 +223,22 @@
                 } else {
                     recordingsList.innerHTML = data.recordings.map(rec => `
                         <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1 text-break">${rec.filename}</h6>
+                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                <div class="flex-grow-1 me-2">
+                                    <h6 class="mb-1 text-break">${rec.filename}</h6>
+                                    <small class="text-muted">
+                                        ${formatBytes(rec.size)} • ${formatDate(rec.created)}
+                                    </small>
+                                </div>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-primary" onclick="downloadRecording('${rec.filename}')" title="Download">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteRecording('${rec.filename}')" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <small class="text-muted">
-                                ${formatBytes(rec.size)} • ${formatDate(rec.created)}
-                            </small>
                         </div>
                     `).join('');
                 }
@@ -254,6 +264,34 @@
         function formatDate(timestamp) {
             const date = new Date(timestamp * 1000);
             return date.toLocaleString();
+        }
+
+        // Download recording
+        function downloadRecording(filename) {
+            window.location.href = `/api/recordings/${encodeURIComponent(filename)}`;
+        }
+
+        // Delete recording
+        async function deleteRecording(filename) {
+            if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/recordings/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus(data.message, 'success');
+                    loadRecordings();
+                } else {
+                    showStatus(data.message, 'danger');
+                }
+            } catch (error) {
+                showStatus('Error deleting recording', 'danger');
+            }
         }
 
         // Refresh recordings

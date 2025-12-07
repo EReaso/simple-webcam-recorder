@@ -1,5 +1,5 @@
 """Flask application routes."""
-from flask import Blueprint, render_template, Response, jsonify, current_app
+from flask import Blueprint, render_template, Response, jsonify, current_app, send_from_directory
 import os
 
 # Create blueprint for main routes
@@ -87,3 +87,80 @@ def list_recordings():
     files.sort(key=lambda x: x['created'], reverse=True)
     
     return jsonify({'recordings': files})
+
+
+@main_bp.route('/api/recordings/<filename>', methods=['GET'])
+def download_recording(filename):
+    """Download a specific recording."""
+    recordings_dir = current_app.config['RECORDINGS_DIR']
+    
+    # Security check: prevent directory traversal
+    if '..' in filename or '/' in filename or '\\' in filename:
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid filename'
+        }), 400
+    
+    # Check if file exists and is a valid video file
+    if not filename.endswith(('.mp4', '.avi', '.mov')):
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid file type'
+        }), 400
+    
+    filepath = os.path.join(recordings_dir, filename)
+    if not os.path.exists(filepath):
+        return jsonify({
+            'status': 'error',
+            'message': 'File not found'
+        }), 404
+    
+    return send_from_directory(recordings_dir, filename, as_attachment=True)
+
+
+@main_bp.route('/api/recordings/<filename>', methods=['DELETE'])
+def delete_recording(filename):
+    """Delete a specific recording."""
+    recordings_dir = current_app.config['RECORDINGS_DIR']
+    
+    # Security check: prevent directory traversal
+    if '..' in filename or '/' in filename or '\\' in filename:
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid filename'
+        }), 400
+    
+    # Check if file is a valid video file
+    if not filename.endswith(('.mp4', '.avi', '.mov')):
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid file type'
+        }), 400
+    
+    filepath = os.path.join(recordings_dir, filename)
+    if not os.path.exists(filepath):
+        return jsonify({
+            'status': 'error',
+            'message': 'File not found'
+        }), 404
+    
+    # Check if file is currently being recorded
+    camera = current_app.config['camera']
+    status = camera.get_recording_status()
+    if status['is_recording'] and status['filename'] == filename:
+        return jsonify({
+            'status': 'error',
+            'message': 'Cannot delete file currently being recorded'
+        }), 400
+    
+    try:
+        os.remove(filepath)
+        return jsonify({
+            'status': 'success',
+            'message': 'Recording deleted successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to delete file: {str(e)}'
+        }), 500
