@@ -292,8 +292,11 @@ class Camera:
         """Release camera resources."""
         # Stop the cleanup thread
         self.cleanup_stop_event.set()
-        if self.cleanup_thread is not None:
+        if self.cleanup_thread is not None and self.cleanup_thread.is_alive():
             self.cleanup_thread.join(timeout=self.CLEANUP_THREAD_JOIN_TIMEOUT)
+            if self.cleanup_thread.is_alive():
+                # Thread didn't stop gracefully - this shouldn't happen but log if it does
+                print(f"Warning: Cleanup thread did not terminate within {self.CLEANUP_THREAD_JOIN_TIMEOUT}s")
         
         with self.lock:
             if self.video_writer is not None:
