@@ -273,7 +273,19 @@
 
         // Delete recording
         async function deleteRecording(filename) {
-            if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+            // Escape filename for safe display
+            const escapedFilename = filename.replace(/[<>"'&]/g, function(char) {
+                const escapeMap = {
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;',
+                    '&': '&amp;'
+                };
+                return escapeMap[char];
+            });
+            
+            if (!confirm(`Are you sure you want to delete "${escapedFilename}"?`)) {
                 return;
             }
 

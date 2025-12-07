@@ -159,8 +159,8 @@ def delete_recording(filename):
             'status': 'success',
             'message': 'Recording deleted successfully'
         })
-    except Exception as e:
+    except Exception:
         return jsonify({
             'status': 'error',
-            'message': f'Failed to delete file: {str(e)}'
+            'message': 'Failed to delete file'
         }), 500
