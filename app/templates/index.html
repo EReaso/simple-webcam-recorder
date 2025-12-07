@@ -240,10 +240,10 @@
                                     </small>
                                 </div>
                                 <div class="btn-group btn-group-sm" role="group">
-                                    <button class="btn btn-outline-primary" data-filename="${escapedFilename}" data-action="download" title="Download">
+                                    <button class="btn btn-outline-primary recording-action" data-filename="${rec.filename}" data-action="download" title="Download">
                                         <i class="bi bi-download"></i>
                                     </button>
-                                    <button class="btn btn-outline-danger" data-filename="${escapedFilename}" data-action="delete" title="Delete">
+                                    <button class="btn btn-outline-danger recording-action" data-filename="${rec.filename}" data-action="delete" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
@@ -251,19 +251,6 @@
                         </div>
                     `;
                     }).join('');
-                    
-                    // Add event listeners using event delegation
-                    recordingsList.querySelectorAll('button[data-action]').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            const filename = this.getAttribute('data-filename');
-                            const action = this.getAttribute('data-action');
-                            if (action === 'download') {
-                                downloadRecording(filename);
-                            } else if (action === 'delete') {
-                                deleteRecording(filename);
-                            }
-                        });
-                    });
                 }
             } catch (error) {
                 recordingsList.innerHTML = `
@@ -296,6 +283,16 @@
 
         // Delete recording
         async function deleteRecording(filename) {
+            // Escape filename for display in confirmation dialog
+            const escapedFilename = filename
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            
+            // Note: confirm() displays plain text, so HTML entities will show as-is
+            // Using a simple string without escaping for better UX
             if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
                 return;
             }
@@ -316,6 +313,21 @@
                 showStatus('Error deleting recording', 'danger');
             }
         }
+
+        // Event delegation for recording action buttons
+        recordingsList.addEventListener('click', function(event) {
+            const button = event.target.closest('.recording-action');
+            if (button) {
+                const filename = button.getAttribute('data-filename');
+                const action = button.getAttribute('data-action');
+                
+                if (action === 'download') {
+                    downloadRecording(filename);
+                } else if (action === 'delete') {
+                    deleteRecording(filename);
+                }
+            }
+        });
 
         // Refresh recordings
         refreshBtn.addEventListener('click', loadRecordings);
