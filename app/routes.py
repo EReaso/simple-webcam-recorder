@@ -1,9 +1,13 @@
 """Flask application routes."""
-from flask import Blueprint, render_template, Response, jsonify, current_app
+from flask import Blueprint, render_template, Response, jsonify, current_app, send_from_directory
 import os
+import logging
 
 # Create blueprint for main routes
 main_bp = Blueprint('main', __name__)
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 @main_bp.route('/')
@@ -87,3 +91,102 @@ def list_recordings():
     files.sort(key=lambda x: x['created'], reverse=True)
     
     return jsonify({'recordings': files})
+
+
+@main_bp.route('/api/recordings/<filename>', methods=['GET'])
+def download_recording(filename):
+    """Download a specific recording."""
+    recordings_dir = current_app.config['RECORDINGS_DIR']
+    
+    # Security check: prevent directory traversal
+    if '..' in filename or '/' in filename or '\\' in filename:
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid filename'
+        }), 400
+    
+    # Check if file exists and is a valid video file
+    if not filename.endswith(('.mp4', '.avi', '.mov')):
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid file type'
+        }), 400
+    
+    filepath = os.path.join(recordings_dir, filename)
+    if not os.path.exists(filepath):
+        return jsonify({
+            'status': 'error',
+            'message': 'File not found'
+        }), 404
+    
+    return send_from_directory(recordings_dir, filename, as_attachment=True)
+
+
+@main_bp.route('/api/recordings/<filename>', methods=['DELETE'])
+def delete_recording(filename):
+    """Delete a specific recording."""
+    recordings_dir = current_app.config['RECORDINGS_DIR']
+    
+    # Security check: prevent directory traversal
+    if '..' in filename or '/' in filename or '\\' in filename:
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid filename'
+        }), 400
+    
+    # Check if file is a valid video file
+    if not filename.endswith(('.mp4', '.avi', '.mov')):
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid file type'
+        }), 400
+    
+    filepath = os.path.join(recordings_dir, filename)
+    if not os.path.exists(filepath):
+        return jsonify({
+            'status': 'error',
+            'message': 'File not found'
+        }), 404
+    
+    # Check if file is currently being recorded
+    camera = current_app.config['camera']
+    status = camera.get_recording_status()
+    if status['is_recording'] and status['filename']:
+        # Normalize both filenames for comparison
+        try:
+            status_filepath = os.path.join(recordings_dir, status['filename'])
+            if os.path.exists(filepath) and os.path.exists(status_filepath):
+                if os.path.samefile(filepath, status_filepath):
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'Cannot delete file currently being recorded'
+                    }), 400
+            elif status['filename'] == filename:
+                # Fallback to string comparison if files don't exist yet
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Cannot delete file currently being recorded'
+                }), 400
+        except (OSError, ValueError):
+            # If samefile fails, use string comparison
+            if status['filename'] == filename:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Cannot delete file currently being recorded'
+                }), 400
+    
+    try:
+        os.remove(filepath)
+        return jsonify({
+            'status': 'success',
+            'message': 'Recording deleted successfully'
+        })
+    except Exception as e:
+        # Log the actual error for debugging (sanitize filename for log injection prevention)
+        safe_filename = filename.replace('\n', '').replace('\r', '')
+        logger.error(f'Failed to delete recording {safe_filename}: {str(e)}')
+        # Return generic error message to client
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to delete file'
+        }), 500

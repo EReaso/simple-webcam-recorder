@@ -221,16 +221,30 @@
                         </div>
                     `;
                 } else {
-                    recordingsList.innerHTML = data.recordings.map(rec => `
+                    recordingsList.innerHTML = data.recordings.map(rec => {
+                        const escapedFilename = escapeHtml(rec.filename);
+                        
+                        return `
                         <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1 text-break">${rec.filename}</h6>
+                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                <div class="flex-grow-1 me-2">
+                                    <h6 class="mb-1 text-break">${escapedFilename}</h6>
+                                    <small class="text-muted">
+                                        ${formatBytes(rec.size)} • ${formatDate(rec.created)}
+                                    </small>
+                                </div>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-primary recording-action" data-filename="${escapedFilename}" data-action="download" title="Download">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger recording-action" data-filename="${escapedFilename}" data-action="delete" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <small class="text-muted">
-                                ${formatBytes(rec.size)} • ${formatDate(rec.created)}
-                            </small>
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
                 }
             } catch (error) {
                 recordingsList.innerHTML = `
@@ -255,6 +269,82 @@
             const date = new Date(timestamp * 1000);
             return date.toLocaleString();
         }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Unescape HTML entities (for retrieving from data attributes)
+        function unescapeHtml(text) {
+            const doc = new DOMParser().parseFromString(text, 'text/html');
+            return doc.body.textContent;
+        }
+
+        // Download recording
+        function downloadRecording(filename) {
+            // Filename comes from data attribute and may be HTML-escaped
+            const actualFilename = unescapeHtml(filename);
+            window.location.href = `/api/recordings/${encodeURIComponent(actualFilename)}`;
+        }
+
+        // Delete recording
+        async function deleteRecording(filename) {
+            // Filename comes from data attribute and may be HTML-escaped
+            const actualFilename = unescapeHtml(filename);
+            
+            // Validate filename length to prevent UI issues
+            if (actualFilename.length > 255) {
+                showStatus('Filename is too long', 'danger');
+                return;
+            }
+            
+            // Note: confirm() displays plain text, no escaping needed
+            // Truncate display if filename is very long
+            const displayName = actualFilename.length > 50 
+                ? actualFilename.substring(0, 47) + '...' 
+                : actualFilename;
+            
+            if (!confirm(`Are you sure you want to delete "${displayName}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/recordings/${encodeURIComponent(actualFilename)}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus(data.message, 'success');
+                    loadRecordings();
+                } else {
+                    showStatus(data.message, 'danger');
+                }
+            } catch (error) {
+                showStatus('Error deleting recording', 'danger');
+            }
+        }
+
+        // Event delegation for recording action buttons
+        recordingsList.addEventListener('click', function(event) {
+            const button = event.target.closest('.recording-action');
+            if (button) {
+                const filename = button.getAttribute('data-filename');
+                const action = button.getAttribute('data-action');
+                
+                if (action === 'download') {
+                    downloadRecording(filename);
+                } else if (action === 'delete') {
+                    deleteRecording(filename);
+                }
+            }
+        });
 
         // Refresh recordings
         refreshBtn.addEventListener('click', loadRecordings);
