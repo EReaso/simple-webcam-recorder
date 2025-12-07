@@ -5,6 +5,8 @@ A plug-and-play Flask web application for recording and streaming USB webcam vid
 ## Features
 
 - 🎥 **Live webcam streaming** - Real-time video stream from USB camera
+- 📡 **RTSP support** - Stream to multiple clients via RTSP protocol
+- 🌐 **Multi-viewer support** - Multiple users can watch simultaneously without errors
 - 🔴 **Video recording** - Start/stop recording with one click
 - 🎨 **Modern UI** - Clean Bootstrap 5 interface
 - ⚙️ **Configurable** - Customize camera settings, resolution, FPS, and more
@@ -20,13 +22,34 @@ The application intelligently manages camera resources to prevent the camera fro
 - **Automatic Release**: The camera is automatically released after 10 seconds of inactivity (configurable via `CAMERA_IDLE_TIMEOUT`)
 - **Viewer Tracking**: The camera stays active while viewers are watching the stream
 - **Recording Protection**: The camera remains active during recording, even if no one is watching
+- **RTSP Protection**: The camera remains active during RTSP streaming
 - **On-Demand Activation**: The camera is initialized only when needed (viewing stream or recording)
+- **Multi-Viewer Support**: Multiple viewers can watch simultaneously without camera errors
 
 This ensures:
 - ✅ Camera is not locked unnecessarily
 - ✅ Other applications can access the camera when not in use
 - ✅ Resources are freed when the stream is not being watched
 - ✅ Recording continues uninterrupted regardless of viewers
+- ✅ Page reloads don't cause camera conflicts
+- ✅ Multiple viewers can watch at the same time
+
+## Streaming Protocols
+
+The application supports two streaming protocols:
+
+1. **MJPEG over HTTP** - Direct browser streaming at `http://localhost:5000/video_feed`
+   - Perfect for web browser viewing
+   - Low latency, simple integration
+   - Works in all modern browsers
+
+2. **RTSP** - Industry standard streaming protocol at `rtsp://localhost:8554/live`
+   - Supports multiple concurrent viewers efficiently
+   - Compatible with VLC, ffmpeg, and most media players
+   - H.264 compression for lower bandwidth usage
+   - Ideal for security camera applications
+
+See [STREAMING.md](STREAMING.md) for detailed streaming options and usage instructions.
 
 ## Requirements
 
@@ -87,6 +110,9 @@ Available settings:
 - `CAMERA_IDLE_TIMEOUT` - Seconds before releasing camera when idle (default: 10)
 - `VIDEO_CODEC` - Video codec (default: mp4v)
 - `VIDEO_FORMAT` - Output file format (default: mp4)
+- `RTSP_ENABLED` - Enable RTSP streaming (default: true)
+- `RTSP_PUBLIC_HOST` - Public hostname for RTSP URLs (default: localhost)
+- `RTSP_PUBLIC_PORT` - Public port for RTSP (default: 8554)
 - `WORKERS` - Number of Gunicorn worker processes (default: 4)
 
 ## Platform-Specific Notes
@@ -128,6 +154,52 @@ The unified Docker image automatically uses `opencv-python-headless` which is op
 On macOS and Windows, webcam device mapping may differ from Linux. Refer to Docker documentation for your platform:
 - macOS: [Docker Desktop for Mac](https://docs.docker.com/desktop/mac/)
 - Windows: [Docker Desktop for Windows](https://docs.docker.com/desktop/windows/)
+
+## Using RTSP Streaming
+
+The application includes built-in RTSP support for multiple viewers and external applications.
+
+### Accessing the RTSP Stream
+
+**VLC Media Player:**
+1. Open VLC
+2. Go to Media → Open Network Stream
+3. Enter: `rtsp://localhost:8554/live`
+4. Click Play
+
+**ffmpeg/ffplay:**
+```bash
+# Play the stream
+ffplay rtsp://localhost:8554/live
+
+# Save to file
+ffmpeg -i rtsp://localhost:8554/live -c copy output.mp4
+```
+
+### Multiple Viewers
+
+The RTSP stream supports multiple concurrent viewers efficiently:
+- Multiple browsers can view the web interface simultaneously
+- RTSP clients can connect while the web interface is in use
+- Recording and viewing can happen at the same time
+- Page reloads no longer cause camera errors
+
+### External Access
+
+To access RTSP from other devices on your network:
+
+1. Update `docker-compose.yml`:
+   ```yaml
+   environment:
+     - RTSP_PUBLIC_HOST=192.168.1.100  # Your server's IP
+   ```
+
+2. Access from other devices:
+   ```
+   rtsp://192.168.1.100:8554/live
+   ```
+
+See [STREAMING.md](STREAMING.md) for detailed streaming documentation.
 
 ## Docker Commands
 

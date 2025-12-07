@@ -26,6 +26,64 @@ def video_feed():
     )
 
 
+@main_bp.route('/api/stream/rtsp/start', methods=['POST'])
+def start_rtsp_stream():
+    """Start RTSP streaming endpoint."""
+    stream_manager = current_app.config.get('stream_manager')
+    if not stream_manager:
+        return jsonify({
+            'status': 'error',
+            'message': 'RTSP streaming is not enabled'
+        }), 400
+    
+    camera = current_app.config['camera']
+    if stream_manager.start_streaming(camera):
+        return jsonify({
+            'status': 'success',
+            'message': 'RTSP streaming started',
+            'rtsp_url': stream_manager.get_rtsp_url()
+        })
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to start RTSP streaming'
+        }), 500
+
+
+@main_bp.route('/api/stream/rtsp/stop', methods=['POST'])
+def stop_rtsp_stream():
+    """Stop RTSP streaming endpoint."""
+    stream_manager = current_app.config.get('stream_manager')
+    if not stream_manager:
+        return jsonify({
+            'status': 'error',
+            'message': 'RTSP streaming is not enabled'
+        }), 400
+    
+    stream_manager.stop_streaming()
+    return jsonify({
+        'status': 'success',
+        'message': 'RTSP streaming stopped'
+    })
+
+
+@main_bp.route('/api/stream/rtsp/status', methods=['GET'])
+def rtsp_stream_status():
+    """Get RTSP streaming status endpoint."""
+    stream_manager = current_app.config.get('stream_manager')
+    if not stream_manager:
+        return jsonify({
+            'enabled': False,
+            'active': False
+        })
+    
+    return jsonify({
+        'enabled': True,
+        'active': stream_manager.is_active(),
+        'rtsp_url': stream_manager.get_rtsp_url() if stream_manager.is_active() else None
+    })
+
+
 @main_bp.route('/api/recording/start', methods=['POST'])
 def start_recording():
     """Start recording endpoint."""

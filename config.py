@@ -28,6 +28,12 @@ class Config:
     PORT = int(os.environ.get('PORT', 5000))
     DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
     WORKERS = int(os.environ.get('WORKERS', 4))  # Number of Gunicorn workers
+    
+    # RTSP streaming settings
+    RTSP_ENABLED = os.environ.get('RTSP_ENABLED', 'True').lower() == 'true'
+    RTSP_OUTPUT_URL = os.environ.get('RTSP_OUTPUT_URL', 'rtsp://mediamtx:8554/live')
+    RTSP_PUBLIC_HOST = os.environ.get('RTSP_PUBLIC_HOST', 'localhost')
+    RTSP_PUBLIC_PORT = os.environ.get('RTSP_PUBLIC_PORT', '8554')
 
 
 class DevelopmentConfig(Config):
