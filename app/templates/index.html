@@ -234,10 +234,10 @@
                                     </small>
                                 </div>
                                 <div class="btn-group btn-group-sm" role="group">
-                                    <button class="btn btn-outline-primary recording-action" data-filename="${rec.filename}" data-action="download" title="Download">
+                                    <button class="btn btn-outline-primary recording-action" data-filename="${escapedFilename}" data-action="download" title="Download">
                                         <i class="bi bi-download"></i>
                                     </button>
-                                    <button class="btn btn-outline-danger recording-action" data-filename="${rec.filename}" data-action="delete" title="Delete">
+                                    <button class="btn btn-outline-danger recording-action" data-filename="${escapedFilename}" data-action="delete" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
@@ -280,20 +280,31 @@
                 .replace(/'/g, '&#39;');
         }
 
+        // Unescape HTML entities (for retrieving from data attributes)
+        function unescapeHtml(text) {
+            const doc = new DOMParser().parseFromString(text, 'text/html');
+            return doc.documentElement.textContent;
+        }
+
         // Download recording
         function downloadRecording(filename) {
-            window.location.href = `/api/recordings/${encodeURIComponent(filename)}`;
+            // Filename comes from data attribute and may be HTML-escaped
+            const actualFilename = unescapeHtml(filename);
+            window.location.href = `/api/recordings/${encodeURIComponent(actualFilename)}`;
         }
 
         // Delete recording
         async function deleteRecording(filename) {
-            // Note: confirm() displays plain text, so no need to escape
-            if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+            // Filename comes from data attribute and may be HTML-escaped
+            const actualFilename = unescapeHtml(filename);
+            
+            // Note: confirm() displays plain text, no escaping needed
+            if (!confirm(`Are you sure you want to delete "${actualFilename}"?`)) {
                 return;
             }
 
             try {
-                const response = await fetch(`/api/recordings/${encodeURIComponent(filename)}`, {
+                const response = await fetch(`/api/recordings/${encodeURIComponent(actualFilename)}`, {
                     method: 'DELETE'
                 });
                 const data = await response.json();
