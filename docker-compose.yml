@@ -1,4 +1,19 @@
 services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    ports:
+      - "8554:8554"  # RTSP port
+      - "8888:8888"  # WebRTC port
+      - "8889:8889"  # HLS port
+    networks:
+      - webcam-network
+    restart: unless-stopped
+    environment:
+      - MTX_PROTOCOLS=tcp
+      - MTX_RTSPADDRESS=:8554
+      - MTX_RTPADDRESS=:8000
+      - MTX_RTCPADDRESS=:8001
+    
   webcam-recorder:
     build: .
     ports:
@@ -18,11 +33,18 @@ services:
       - CAMERA_WIDTH=640
       - CAMERA_HEIGHT=480
       - CAMERA_FPS=30
+      # RTSP streaming settings
+      - RTSP_ENABLED=true
+      - RTSP_OUTPUT_URL=rtsp://mediamtx:8554/live
+      - RTSP_PUBLIC_HOST=localhost
+      - RTSP_PUBLIC_PORT=8554
       # Server settings
       # For Raspberry Pi or other ARM devices with limited resources, 
       # reduce WORKERS to 2-3 for better performance
       - WORKERS=4
     restart: unless-stopped
+    depends_on:
+      - mediamtx
     networks:
       - webcam-network
 

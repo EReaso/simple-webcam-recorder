@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-# Install system dependencies for OpenCV
+# Install system dependencies for OpenCV and FFMPEG
 # Using opencv-python-headless for better multi-arch compatibility (x86_64 and ARM)
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     libavcodec-dev \
     libavformat-dev \
     libswscale-dev \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

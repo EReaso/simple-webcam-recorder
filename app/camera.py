@@ -40,11 +40,16 @@ class Camera:
         # Support both dict-like Flask config and config objects
         if hasattr(config, 'get'):
             self.idle_timeout = config.get('CAMERA_IDLE_TIMEOUT', 10)
+            self.rtsp_enabled = config.get('RTSP_ENABLED', True)
         else:
             self.idle_timeout = getattr(config, 'CAMERA_IDLE_TIMEOUT', 10)
+            self.rtsp_enabled = getattr(config, 'RTSP_ENABLED', True)
         self.cleanup_thread = None
         self.cleanup_stop_event = threading.Event()
         self._start_cleanup_thread()
+        
+        # Stream manager reference (will be set by app initialization)
+        self.stream_manager = None
         
     def create_error_frame(self, message: str) -> Optional[bytes]:
         """Create an error frame with a message.
@@ -128,8 +133,19 @@ class Camera:
             # Check if camera should be released due to inactivity
             # All checks done inside the lock to prevent race conditions
             with self.lock:
+                # Check RTSP streaming status safely
+                rtsp_active = False
+                if self.stream_manager is not None:
+                    try:
+                        rtsp_active = self.stream_manager.is_active()
+                    except (AttributeError, RuntimeError):
+                        # AttributeError: stream_manager became None
+                        # RuntimeError: stream_manager in inconsistent state
+                        rtsp_active = False
+                
                 if (self.camera is not None and 
                     not self.is_recording and 
+                    not rtsp_active and
                     self.active_viewers == 0 and
                     self.last_access_time is not None):
                     idle_time = time.time() - self.last_access_time
@@ -224,6 +240,14 @@ class Camera:
         """Unregister a viewer from the stream."""
         with self.lock:
             self.active_viewers = max(0, self.active_viewers - 1)
+    
+    def set_stream_manager(self, stream_manager):
+        """Set the stream manager for RTSP streaming.
+        
+        Args:
+            stream_manager: StreamManager instance
+        """
+        self.stream_manager = stream_manager
     
     def generate_frames(self):
         """Generator function for streaming frames."""
