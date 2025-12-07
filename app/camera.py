@@ -127,19 +127,16 @@ class Camera:
             
             # Check if camera should be released due to inactivity
             # All checks done inside the lock to prevent race conditions
-            if self.last_access_time is not None:
-                idle_time = time.time() - self.last_access_time
-                if idle_time > self.idle_timeout:
-                    with self.lock:
-                        # Double-check conditions inside lock as they may have changed
-                        if (self.camera is not None and 
-                            not self.is_recording and 
-                            self.active_viewers == 0 and
-                            self.last_access_time is not None and
-                            (time.time() - self.last_access_time) > self.idle_timeout):
-                            self.camera.release()
-                            self.camera = None
-                            self.last_access_time = None
+            with self.lock:
+                if (self.camera is not None and 
+                    not self.is_recording and 
+                    self.active_viewers == 0 and
+                    self.last_access_time is not None):
+                    idle_time = time.time() - self.last_access_time
+                    if idle_time > self.idle_timeout:
+                        self.camera.release()
+                        self.camera = None
+                        self.last_access_time = None
         
     def initialize(self):
         """Initialize the camera."""
@@ -165,8 +162,9 @@ class Camera:
             
     def get_frame(self):
         """Get the current frame from the camera."""
-        # Update last access time
-        self.last_access_time = time.time()
+        # Update last access time (protected by lock to prevent race conditions)
+        with self.lock:
+            self.last_access_time = time.time()
         
         self.initialize()
         
