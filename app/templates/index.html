@@ -222,13 +222,7 @@
                     `;
                 } else {
                     recordingsList.innerHTML = data.recordings.map(rec => {
-                        // Escape HTML to prevent XSS in displayed content
-                        const escapedFilename = rec.filename
-                            .replace(/&/g, '&amp;')
-                            .replace(/</g, '&lt;')
-                            .replace(/>/g, '&gt;')
-                            .replace(/"/g, '&quot;')
-                            .replace(/'/g, '&#39;');
+                        const escapedFilename = escapeHtml(rec.filename);
                         
                         return `
                         <div class="list-group-item">
@@ -276,6 +270,16 @@
             return date.toLocaleString();
         }
 
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         // Download recording
         function downloadRecording(filename) {
             window.location.href = `/api/recordings/${encodeURIComponent(filename)}`;
@@ -283,16 +287,7 @@
 
         // Delete recording
         async function deleteRecording(filename) {
-            // Escape filename for display in confirmation dialog
-            const escapedFilename = filename
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-            
-            // Note: confirm() displays plain text, so HTML entities will show as-is
-            // Using a simple string without escaping for better UX
+            // Note: confirm() displays plain text, so no need to escape
             if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
                 return;
             }
