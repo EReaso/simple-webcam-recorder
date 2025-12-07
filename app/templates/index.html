@@ -109,6 +109,36 @@
                     </div>
                 </div>
 
+                <!-- RTSP Streaming Controls -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-broadcast"></i> RTSP Streaming</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button id="startRtspBtn" class="btn btn-primary btn-lg">
+                                <i class="bi bi-play-circle"></i> Start RTSP Stream
+                            </button>
+                            <button id="stopRtspBtn" class="btn btn-secondary btn-lg" disabled>
+                                <i class="bi bi-stop-circle"></i> Stop RTSP Stream
+                            </button>
+                        </div>
+                        
+                        <div class="mt-3" id="rtspInfo" style="display: none;">
+                            <small class="text-muted">RTSP URL:</small>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="rtspUrl" readonly>
+                                <button class="btn btn-outline-secondary" type="button" id="copyRtspBtn" title="Copy URL">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted mt-1 d-block">
+                                Use VLC or other RTSP clients to view
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Recordings List -->
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -141,6 +171,11 @@
         const recordingFilename = document.getElementById('recordingFilename');
         const recordingsList = document.getElementById('recordingsList');
         const refreshBtn = document.getElementById('refreshBtn');
+        const startRtspBtn = document.getElementById('startRtspBtn');
+        const stopRtspBtn = document.getElementById('stopRtspBtn');
+        const rtspInfo = document.getElementById('rtspInfo');
+        const rtspUrl = document.getElementById('rtspUrl');
+        const copyRtspBtn = document.getElementById('copyRtspBtn');
 
         // Show status message
         function showStatus(message, type = 'info') {
@@ -349,6 +384,89 @@
         // Refresh recordings
         refreshBtn.addEventListener('click', loadRecordings);
 
+        // Update RTSP status UI
+        function updateRtspStatus(status) {
+            if (status.enabled) {
+                if (status.active) {
+                    startRtspBtn.disabled = true;
+                    stopRtspBtn.disabled = false;
+                    rtspInfo.style.display = 'block';
+                    rtspUrl.value = status.rtsp_url || '';
+                } else {
+                    startRtspBtn.disabled = false;
+                    stopRtspBtn.disabled = true;
+                    rtspInfo.style.display = 'none';
+                }
+            } else {
+                // RTSP not enabled
+                startRtspBtn.disabled = true;
+                stopRtspBtn.disabled = true;
+                startRtspBtn.innerHTML = '<i class="bi bi-info-circle"></i> RTSP Not Enabled';
+            }
+        }
+
+        // Start RTSP streaming
+        startRtspBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/stream/rtsp/start', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus(data.message, 'success');
+                    updateRtspStatus({ enabled: true, active: true, rtsp_url: data.rtsp_url });
+                } else {
+                    showStatus(data.message, 'danger');
+                }
+            } catch (error) {
+                showStatus('Error starting RTSP stream', 'danger');
+            }
+        });
+
+        // Stop RTSP streaming
+        stopRtspBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/stream/rtsp/stop', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus(data.message, 'success');
+                    updateRtspStatus({ enabled: true, active: false });
+                } else {
+                    showStatus(data.message, 'danger');
+                }
+            } catch (error) {
+                showStatus('Error stopping RTSP stream', 'danger');
+            }
+        });
+
+        // Copy RTSP URL to clipboard
+        copyRtspBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(rtspUrl.value);
+                showStatus('RTSP URL copied to clipboard', 'success');
+            } catch (error) {
+                // Fallback for older browsers
+                rtspUrl.select();
+                document.execCommand('copy');
+                showStatus('RTSP URL copied to clipboard', 'success');
+            }
+        });
+
+        // Poll RTSP status
+        async function pollRtspStatus() {
+            try {
+                const response = await fetch('/api/stream/rtsp/status');
+                const data = await response.json();
+                updateRtspStatus(data);
+            } catch (error) {
+                console.error('Error polling RTSP status:', error);
+            }
+        }
+
         // Poll recording status
         async function pollStatus() {
             try {
@@ -363,7 +481,9 @@
         // Initialize
         loadRecordings();
         pollStatus();
+        pollRtspStatus();
         setInterval(pollStatus, 2000);
+        setInterval(pollRtspStatus, 3000);
     </script>
 </body>
 </html>
