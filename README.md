@@ -11,6 +11,22 @@ A plug-and-play Flask web application for recording and streaming USB webcam vid
 - 📁 **Recording management** - View list of recorded videos
 - 🐳 **Docker-based** - Consistent deployment across x86_64 and ARM architectures
 - 🔧 **Multi-arch support** - Native support for Raspberry Pi and ARM-based systems
+- 🔋 **Smart camera management** - Automatic camera release when idle to free resources
+
+## Camera Lifecycle Management
+
+The application intelligently manages camera resources to prevent the camera from being locked when not in use:
+
+- **Automatic Release**: The camera is automatically released after 10 seconds of inactivity (configurable via `CAMERA_IDLE_TIMEOUT`)
+- **Viewer Tracking**: The camera stays active while viewers are watching the stream
+- **Recording Protection**: The camera remains active during recording, even if no one is watching
+- **On-Demand Activation**: The camera is initialized only when needed (viewing stream or recording)
+
+This ensures:
+- ✅ Camera is not locked unnecessarily
+- ✅ Other applications can access the camera when not in use
+- ✅ Resources are freed when the stream is not being watched
+- ✅ Recording continues uninterrupted regardless of viewers
 
 ## Requirements
 
@@ -50,6 +66,7 @@ environment:
   - CAMERA_WIDTH=640        # Video width
   - CAMERA_HEIGHT=480       # Video height
   - CAMERA_FPS=30           # Frames per second
+  - CAMERA_IDLE_TIMEOUT=10  # Seconds before releasing camera when idle
   - WORKERS=4               # Gunicorn workers (use 2-3 for Raspberry Pi)
 ```
 
@@ -67,6 +84,7 @@ Available settings:
 - `CAMERA_WIDTH` - Video width in pixels (default: 640)
 - `CAMERA_HEIGHT` - Video height in pixels (default: 480)
 - `CAMERA_FPS` - Frames per second (default: 30)
+- `CAMERA_IDLE_TIMEOUT` - Seconds before releasing camera when idle (default: 10)
 - `VIDEO_CODEC` - Video codec (default: mp4v)
 - `VIDEO_FORMAT` - Output file format (default: mp4)
 - `WORKERS` - Number of Gunicorn worker processes (default: 4)
