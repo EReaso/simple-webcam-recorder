@@ -221,26 +221,49 @@
                         </div>
                     `;
                 } else {
-                    recordingsList.innerHTML = data.recordings.map(rec => `
+                    recordingsList.innerHTML = data.recordings.map(rec => {
+                        // Escape HTML to prevent XSS in displayed content
+                        const escapedFilename = rec.filename
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/"/g, '&quot;')
+                            .replace(/'/g, '&#39;');
+                        
+                        return `
                         <div class="list-group-item">
                             <div class="d-flex w-100 justify-content-between align-items-start">
                                 <div class="flex-grow-1 me-2">
-                                    <h6 class="mb-1 text-break">${rec.filename}</h6>
+                                    <h6 class="mb-1 text-break">${escapedFilename}</h6>
                                     <small class="text-muted">
                                         ${formatBytes(rec.size)} • ${formatDate(rec.created)}
                                     </small>
                                 </div>
                                 <div class="btn-group btn-group-sm" role="group">
-                                    <button class="btn btn-outline-primary" onclick="downloadRecording('${rec.filename}')" title="Download">
+                                    <button class="btn btn-outline-primary" data-filename="${escapedFilename}" data-action="download" title="Download">
                                         <i class="bi bi-download"></i>
                                     </button>
-                                    <button class="btn btn-outline-danger" onclick="deleteRecording('${rec.filename}')" title="Delete">
+                                    <button class="btn btn-outline-danger" data-filename="${escapedFilename}" data-action="delete" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
+                    
+                    // Add event listeners using event delegation
+                    recordingsList.querySelectorAll('button[data-action]').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const filename = this.getAttribute('data-filename');
+                            const action = this.getAttribute('data-action');
+                            if (action === 'download') {
+                                downloadRecording(filename);
+                            } else if (action === 'delete') {
+                                deleteRecording(filename);
+                            }
+                        });
+                    });
                 }
             } catch (error) {
                 recordingsList.innerHTML = `
@@ -273,19 +296,7 @@
 
         // Delete recording
         async function deleteRecording(filename) {
-            // Escape filename for safe display
-            const escapedFilename = filename.replace(/[<>"'&]/g, function(char) {
-                const escapeMap = {
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#39;',
-                    '&': '&amp;'
-                };
-                return escapeMap[char];
-            });
-            
-            if (!confirm(`Are you sure you want to delete "${escapedFilename}"?`)) {
+            if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
                 return;
             }
 

@@ -1,9 +1,13 @@
 """Flask application routes."""
 from flask import Blueprint, render_template, Response, jsonify, current_app, send_from_directory
 import os
+import logging
 
 # Create blueprint for main routes
 main_bp = Blueprint('main', __name__)
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 @main_bp.route('/')
@@ -159,7 +163,10 @@ def delete_recording(filename):
             'status': 'success',
             'message': 'Recording deleted successfully'
         })
-    except Exception:
+    except Exception as e:
+        # Log the actual error for debugging
+        logger.error(f'Failed to delete recording {filename}: {str(e)}')
+        # Return generic error message to client
         return jsonify({
             'status': 'error',
             'message': 'Failed to delete file'
