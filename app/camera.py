@@ -4,6 +4,7 @@ import threading
 import datetime
 import os
 import numpy as np
+import time
 from typing import Optional
 
 
@@ -16,6 +17,11 @@ class Camera:
     CAMERA_READ_FAIL_MSG = "Camera Error\nFailed to read from camera\nCheck if device is in use or disconnected"
     UNKNOWN_ERROR_MSG = "Camera Error\nUnknown error occurred"
     
+    # Cleanup thread check interval in seconds
+    CLEANUP_CHECK_INTERVAL = 2
+    # Cleanup thread join timeout in seconds
+    CLEANUP_THREAD_JOIN_TIMEOUT = 3
+    
     def __init__(self, config):
         """Initialize camera with configuration."""
         self.config = config
@@ -27,6 +33,18 @@ class Camera:
         self.recording_filename = None
         self.camera_error = None
         self.error_frame = None
+        
+        # Camera lifecycle management
+        self.active_viewers = 0
+        self.last_access_time = None
+        # Support both dict-like Flask config and config objects
+        if hasattr(config, 'get'):
+            self.idle_timeout = config.get('CAMERA_IDLE_TIMEOUT', 10)
+        else:
+            self.idle_timeout = getattr(config, 'CAMERA_IDLE_TIMEOUT', 10)
+        self.cleanup_thread = None
+        self.cleanup_stop_event = threading.Event()
+        self._start_cleanup_thread()
         
     def create_error_frame(self, message: str) -> Optional[bytes]:
         """Create an error frame with a message.
@@ -94,6 +112,31 @@ class Camera:
         if error_frame is None:
             error_frame = self.create_error_frame(self.FALLBACK_ERROR_MSG)
         return error_frame
+    
+    def _start_cleanup_thread(self):
+        """Start the background cleanup thread."""
+        if self.cleanup_thread is None or not self.cleanup_thread.is_alive():
+            self.cleanup_stop_event.clear()
+            self.cleanup_thread = threading.Thread(target=self._cleanup_worker, daemon=True)
+            self.cleanup_thread.start()
+    
+    def _cleanup_worker(self):
+        """Background worker that releases camera when idle."""
+        while not self.cleanup_stop_event.is_set():
+            time.sleep(self.CLEANUP_CHECK_INTERVAL)
+            
+            # Check if camera should be released due to inactivity
+            # All checks done inside the lock to prevent race conditions
+            with self.lock:
+                if (self.camera is not None and 
+                    not self.is_recording and 
+                    self.active_viewers == 0 and
+                    self.last_access_time is not None):
+                    idle_time = time.time() - self.last_access_time
+                    if idle_time > self.idle_timeout:
+                        self.camera.release()
+                        self.camera = None
+                        self.last_access_time = None
         
     def initialize(self):
         """Initialize the camera."""
@@ -119,6 +162,10 @@ class Camera:
             
     def get_frame(self):
         """Get the current frame from the camera."""
+        # Update last access time (protected by lock to prevent race conditions)
+        with self.lock:
+            self.last_access_time = time.time()
+        
         self.initialize()
         
         # If camera initialization failed or camera has an error, return error frame
@@ -168,13 +215,27 @@ class Camera:
         # Fallback: return a basic error frame
         return self.create_error_frame(self.UNKNOWN_ERROR_MSG)
     
+    def add_viewer(self):
+        """Register a new viewer for the stream."""
+        with self.lock:
+            self.active_viewers += 1
+    
+    def remove_viewer(self):
+        """Unregister a viewer from the stream."""
+        with self.lock:
+            self.active_viewers = max(0, self.active_viewers - 1)
+    
     def generate_frames(self):
         """Generator function for streaming frames."""
-        while True:
-            frame = self.get_frame()
-            if frame is not None:
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        self.add_viewer()
+        try:
+            while True:
+                frame = self.get_frame()
+                if frame is not None:
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        finally:
+            self.remove_viewer()
     
     def start_recording(self) -> Optional[str]:
         """Start recording video."""
@@ -229,6 +290,14 @@ class Camera:
     
     def release(self):
         """Release camera resources."""
+        # Stop the cleanup thread
+        self.cleanup_stop_event.set()
+        if self.cleanup_thread is not None and self.cleanup_thread.is_alive():
+            self.cleanup_thread.join(timeout=self.CLEANUP_THREAD_JOIN_TIMEOUT)
+            if self.cleanup_thread.is_alive():
+                # Thread didn't stop gracefully - this shouldn't happen but log if it does
+                print(f"Warning: Cleanup thread did not terminate within {self.CLEANUP_THREAD_JOIN_TIMEOUT}s")
+        
         with self.lock:
             if self.video_writer is not None:
                 self.video_writer.release()

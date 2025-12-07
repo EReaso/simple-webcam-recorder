@@ -77,6 +77,17 @@ The MJPEG approach was chosen for this implementation because:
 - Frame rate and resolution are configurable via environment variables
 - The stream is multicast - multiple viewers share the same frames
 
+## Camera Resource Management
+
+The application features intelligent camera lifecycle management:
+
+- **Automatic Release**: Camera is released after 10 seconds when no viewers are watching and not recording (configurable via `CAMERA_IDLE_TIMEOUT`)
+- **Viewer Tracking**: Each stream viewer is tracked, keeping the camera active as long as someone is watching
+- **Recording Protection**: During recording, the camera stays active even with no viewers
+- **On-Demand Access**: Camera is only initialized when actually needed
+
+This ensures the camera device is not locked unnecessarily, allowing other applications to access it when the stream is not in use.
+
 ## Security Notes
 
 When deploying in production:
