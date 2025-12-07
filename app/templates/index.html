@@ -283,7 +283,7 @@
         // Unescape HTML entities (for retrieving from data attributes)
         function unescapeHtml(text) {
             const doc = new DOMParser().parseFromString(text, 'text/html');
-            return doc.documentElement.textContent;
+            return doc.body.textContent;
         }
 
         // Download recording
@@ -298,8 +298,19 @@
             // Filename comes from data attribute and may be HTML-escaped
             const actualFilename = unescapeHtml(filename);
             
+            // Validate filename length to prevent UI issues
+            if (actualFilename.length > 255) {
+                showStatus('Filename is too long', 'danger');
+                return;
+            }
+            
             // Note: confirm() displays plain text, no escaping needed
-            if (!confirm(`Are you sure you want to delete "${actualFilename}"?`)) {
+            // Truncate display if filename is very long
+            const displayName = actualFilename.length > 50 
+                ? actualFilename.substring(0, 47) + '...' 
+                : actualFilename;
+            
+            if (!confirm(`Are you sure you want to delete "${displayName}"?`)) {
                 return;
             }
 

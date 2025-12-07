@@ -151,11 +151,29 @@ def delete_recording(filename):
     # Check if file is currently being recorded
     camera = current_app.config['camera']
     status = camera.get_recording_status()
-    if status['is_recording'] and status['filename'] == filename:
-        return jsonify({
-            'status': 'error',
-            'message': 'Cannot delete file currently being recorded'
-        }), 400
+    if status['is_recording'] and status['filename']:
+        # Normalize both filenames for comparison
+        try:
+            status_filepath = os.path.join(recordings_dir, status['filename'])
+            if os.path.exists(filepath) and os.path.exists(status_filepath):
+                if os.path.samefile(filepath, status_filepath):
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'Cannot delete file currently being recorded'
+                    }), 400
+            elif status['filename'] == filename:
+                # Fallback to string comparison if files don't exist yet
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Cannot delete file currently being recorded'
+                }), 400
+        except (OSError, ValueError):
+            # If samefile fails, use string comparison
+            if status['filename'] == filename:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Cannot delete file currently being recorded'
+                }), 400
     
     try:
         os.remove(filepath)
@@ -164,8 +182,9 @@ def delete_recording(filename):
             'message': 'Recording deleted successfully'
         })
     except Exception as e:
-        # Log the actual error for debugging
-        logger.error(f'Failed to delete recording {filename}: {str(e)}')
+        # Log the actual error for debugging (sanitize filename for log injection prevention)
+        safe_filename = filename.replace('\n', '').replace('\r', '')
+        logger.error(f'Failed to delete recording {safe_filename}: {str(e)}')
         # Return generic error message to client
         return jsonify({
             'status': 'error',
