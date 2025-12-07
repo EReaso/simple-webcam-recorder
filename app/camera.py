@@ -17,6 +17,11 @@ class Camera:
     CAMERA_READ_FAIL_MSG = "Camera Error\nFailed to read from camera\nCheck if device is in use or disconnected"
     UNKNOWN_ERROR_MSG = "Camera Error\nUnknown error occurred"
     
+    # Cleanup thread check interval in seconds
+    CLEANUP_CHECK_INTERVAL = 2
+    # Cleanup thread join timeout in seconds
+    CLEANUP_THREAD_JOIN_TIMEOUT = 3
+    
     def __init__(self, config):
         """Initialize camera with configuration."""
         self.config = config
@@ -32,7 +37,11 @@ class Camera:
         # Camera lifecycle management
         self.active_viewers = 0
         self.last_access_time = None
-        self.idle_timeout = config.get('CAMERA_IDLE_TIMEOUT', 10)  # seconds
+        # Support both dict-like Flask config and config objects
+        if hasattr(config, 'get'):
+            self.idle_timeout = config.get('CAMERA_IDLE_TIMEOUT', 10)
+        else:
+            self.idle_timeout = getattr(config, 'CAMERA_IDLE_TIMEOUT', 10)
         self.cleanup_thread = None
         self.cleanup_stop_event = threading.Event()
         self._start_cleanup_thread()
@@ -114,18 +123,20 @@ class Camera:
     def _cleanup_worker(self):
         """Background worker that releases camera when idle."""
         while not self.cleanup_stop_event.is_set():
-            time.sleep(1)  # Check every second
-            
-            # Don't release if recording or viewers are active
-            if self.is_recording or self.active_viewers > 0:
-                continue
+            time.sleep(self.CLEANUP_CHECK_INTERVAL)
             
             # Check if camera should be released due to inactivity
+            # All checks done inside the lock to prevent race conditions
             if self.last_access_time is not None:
                 idle_time = time.time() - self.last_access_time
                 if idle_time > self.idle_timeout:
                     with self.lock:
-                        if self.camera is not None and not self.is_recording and self.active_viewers == 0:
+                        # Double-check conditions inside lock as they may have changed
+                        if (self.camera is not None and 
+                            not self.is_recording and 
+                            self.active_viewers == 0 and
+                            self.last_access_time is not None and
+                            (time.time() - self.last_access_time) > self.idle_timeout):
                             self.camera.release()
                             self.camera = None
                             self.last_access_time = None
@@ -284,7 +295,7 @@ class Camera:
         # Stop the cleanup thread
         self.cleanup_stop_event.set()
         if self.cleanup_thread is not None:
-            self.cleanup_thread.join(timeout=2)
+            self.cleanup_thread.join(timeout=self.CLEANUP_THREAD_JOIN_TIMEOUT)
         
         with self.lock:
             if self.video_writer is not None:
