@@ -456,23 +456,13 @@
             }
         });
 
-        // Poll RTSP status
-        async function pollRtspStatus() {
-            try {
-                const response = await fetch('/api/stream/rtsp/status');
-                const data = await response.json();
-                updateRtspStatus(data);
-            } catch (error) {
-                console.error('Error polling RTSP status:', error);
-            }
-        }
-
-        // Poll recording status
+        // Poll status (combined recording and RTSP)
         async function pollStatus() {
             try {
-                const response = await fetch('/api/recording/status');
+                const response = await fetch('/api/status');
                 const data = await response.json();
-                updateRecordingStatus(data);
+                updateRecordingStatus(data.recording);
+                updateRtspStatus(data.rtsp);
             } catch (error) {
                 console.error('Error polling status:', error);
             }
@@ -481,9 +471,7 @@
         // Initialize
         loadRecordings();
         pollStatus();
-        pollRtspStatus();
         setInterval(pollStatus, 2000);
-        setInterval(pollRtspStatus, 3000);
     </script>
 </body>
 </html>

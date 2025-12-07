@@ -21,11 +21,26 @@ class StreamManager:
         self.stream_thread = None
         self.stop_event = threading.Event()
         
-        # RTSP server settings
-        self.rtsp_url = config.get('RTSP_OUTPUT_URL', 'rtsp://mediamtx:8554/live')
-        self.width = config['CAMERA_WIDTH']
-        self.height = config['CAMERA_HEIGHT']
-        self.fps = config['CAMERA_FPS']
+        # RTSP server settings - handle both dict and object config
+        self.rtsp_url = self._get_config('RTSP_OUTPUT_URL', 'rtsp://mediamtx:8554/live')
+        self.width = self._get_config('CAMERA_WIDTH', 640)
+        self.height = self._get_config('CAMERA_HEIGHT', 480)
+        self.fps = self._get_config('CAMERA_FPS', 30)
+    
+    def _get_config(self, key, default=None):
+        """Get configuration value, handling both dict and object configs.
+        
+        Args:
+            key: Configuration key to retrieve
+            default: Default value if key not found
+            
+        Returns:
+            Configuration value or default
+        """
+        if hasattr(self.config, 'get'):
+            return self.config.get(key, default)
+        else:
+            return getattr(self.config, key, default)
         
     def start_streaming(self, camera):
         """Start streaming to RTSP server.
@@ -151,7 +166,8 @@ class StreamManager:
                     logger.error(f"Error stopping FFMPEG: {e}")
                     try:
                         self.ffmpeg_process.kill()
-                    except:
+                    except Exception:
+                        # FFMPEG process may already be terminated
                         pass
                 finally:
                     self.ffmpeg_process = None
@@ -165,8 +181,8 @@ class StreamManager:
     def get_rtsp_url(self):
         """Get the RTSP URL for clients."""
         # Return public URL (replace mediamtx hostname with actual host)
-        host = self.config.get('RTSP_PUBLIC_HOST', 'localhost')
-        port = self.config.get('RTSP_PUBLIC_PORT', '8554')
+        host = self._get_config('RTSP_PUBLIC_HOST', 'localhost')
+        port = self._get_config('RTSP_PUBLIC_PORT', '8554')
         return f'rtsp://{host}:{port}/live'
 
 

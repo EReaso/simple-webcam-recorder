@@ -120,6 +120,33 @@ def stop_recording():
         }), 400
 
 
+@main_bp.route('/api/status', methods=['GET'])
+def get_status():
+    """Get combined system status (recording and RTSP)."""
+    camera = current_app.config['camera']
+    stream_manager = current_app.config.get('stream_manager')
+    
+    recording_status = camera.get_recording_status()
+    
+    rtsp_status = {
+        'enabled': False,
+        'active': False,
+        'rtsp_url': None
+    }
+    
+    if stream_manager:
+        rtsp_status = {
+            'enabled': True,
+            'active': stream_manager.is_active(),
+            'rtsp_url': stream_manager.get_rtsp_url() if stream_manager.is_active() else None
+        }
+    
+    return jsonify({
+        'recording': recording_status,
+        'rtsp': rtsp_status
+    })
+
+
 @main_bp.route('/api/recording/status', methods=['GET'])
 def recording_status():
     """Get recording status endpoint."""
