@@ -14,6 +14,7 @@ class Config:
     CAMERA_WIDTH = int(os.environ.get('CAMERA_WIDTH', 640))
     CAMERA_HEIGHT = int(os.environ.get('CAMERA_HEIGHT', 480))
     CAMERA_FPS = int(os.environ.get('CAMERA_FPS', 30))
+    CAMERA_IDLE_TIMEOUT = int(os.environ.get('CAMERA_IDLE_TIMEOUT', 10))  # Seconds before releasing camera when idle
     
     # Recording settings
     RECORDINGS_DIR = os.environ.get('RECORDINGS_DIR') or os.path.join(
