@@ -174,8 +174,9 @@ class StreamManager:
                     logger.error(f"Error stopping FFMPEG: {e}")
                     try:
                         self.ffmpeg_process.kill()
-                    except Exception:
-                        # FFMPEG process may already be terminated
+                    except (ProcessLookupError, AttributeError):
+                        # ProcessLookupError: process already terminated
+                        # AttributeError: ffmpeg_process is None
                         pass
                 finally:
                     self.ffmpeg_process = None

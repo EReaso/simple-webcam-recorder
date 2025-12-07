@@ -138,8 +138,9 @@ class Camera:
                 if self.stream_manager is not None:
                     try:
                         rtsp_active = self.stream_manager.is_active()
-                    except Exception:
-                        # If checking status fails, assume not active
+                    except (AttributeError, RuntimeError):
+                        # AttributeError: stream_manager became None
+                        # RuntimeError: stream_manager in inconsistent state
                         rtsp_active = False
                 
                 if (self.camera is not None and 
