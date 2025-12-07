@@ -133,9 +133,14 @@ class Camera:
             # Check if camera should be released due to inactivity
             # All checks done inside the lock to prevent race conditions
             with self.lock:
-                # Don't release camera if RTSP streaming is active
-                rtsp_active = (self.stream_manager and 
-                              self.stream_manager.is_active())
+                # Check RTSP streaming status safely
+                rtsp_active = False
+                if self.stream_manager is not None:
+                    try:
+                        rtsp_active = self.stream_manager.is_active()
+                    except Exception:
+                        # If checking status fails, assume not active
+                        rtsp_active = False
                 
                 if (self.camera is not None and 
                     not self.is_recording and 

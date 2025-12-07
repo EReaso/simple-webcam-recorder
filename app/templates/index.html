@@ -446,13 +446,21 @@
         // Copy RTSP URL to clipboard
         copyRtspBtn.addEventListener('click', async () => {
             try {
-                await navigator.clipboard.writeText(rtspUrl.value);
-                showStatus('RTSP URL copied to clipboard', 'success');
+                if (navigator.clipboard && window.isSecureContext) {
+                    // Modern Clipboard API (requires HTTPS or localhost)
+                    await navigator.clipboard.writeText(rtspUrl.value);
+                    showStatus('RTSP URL copied to clipboard', 'success');
+                } else {
+                    // Fallback for non-HTTPS or older browsers
+                    showStatus('Please copy the URL manually (Ctrl+C)', 'info');
+                    rtspUrl.select();
+                    rtspUrl.focus();
+                }
             } catch (error) {
-                // Fallback for older browsers
+                // If all else fails, select the text for manual copy
+                showStatus('Please copy the URL manually (Ctrl+C)', 'info');
                 rtspUrl.select();
-                document.execCommand('copy');
-                showStatus('RTSP URL copied to clipboard', 'success');
+                rtspUrl.focus();
             }
         });
 

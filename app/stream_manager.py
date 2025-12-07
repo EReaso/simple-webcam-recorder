@@ -122,8 +122,12 @@ class StreamManager:
                         if success and frame is not None:
                             # Write raw frame to FFMPEG stdin
                             try:
-                                self.ffmpeg_process.stdin.write(frame.tobytes())
-                            except (BrokenPipeError, IOError) as e:
+                                if self.ffmpeg_process.stdin:
+                                    self.ffmpeg_process.stdin.write(frame.tobytes())
+                                else:
+                                    logger.error("FFMPEG stdin is None")
+                                    break
+                            except (BrokenPipeError, IOError, AttributeError) as e:
                                 logger.error(f"FFMPEG pipe error: {e}")
                                 break
                         else:
@@ -161,7 +165,11 @@ class StreamManager:
                 try:
                     self.ffmpeg_process.stdin.close()
                     self.ffmpeg_process.terminate()
-                    self.ffmpeg_process.wait(timeout=2)
+                    try:
+                        self.ffmpeg_process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        logger.warning("FFMPEG process did not terminate, killing it")
+                        self.ffmpeg_process.kill()
                 except Exception as e:
                     logger.error(f"Error stopping FFMPEG: {e}")
                     try:
