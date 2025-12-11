@@ -1,3 +1,6 @@
+# This repository has been abandoned. Please use Mediamtx or similar
+
+
 # Simple Webcam Recorder
 
 A plug-and-play Flask web application for recording and streaming USB webcam video. Features a modern Bootstrap 5 web interface with Docker-based deployment.
